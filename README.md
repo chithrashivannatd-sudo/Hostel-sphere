@@ -37,3 +37,6 @@ Integrated Smart Hostel Management System built with Django.
 ## Authors
 - Chithra T S
 - Annapurna L
+
+   ## Screenshots
+   ![Login](login.png)

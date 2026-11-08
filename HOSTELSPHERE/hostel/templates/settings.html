@@ -1,0 +1,472 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="max-width: 1040px; margin: 0 auto;">
+    <div style="margin-bottom: 1.5rem;">
+        <h1 style="margin: 0 0 0.35rem;">System &amp; Portal Settings</h1>
+        <p style="color: var(--mute); margin: 0; font-size: 0.95rem;">
+            Administrative control center to configure fees, rules, permissions, and manage accounts for Students, Wardens, and Maintenance.
+        </p>
+    </div>
+
+    <!-- Metric Stat Badges -->
+    <div class="stats" style="margin-bottom: 1.6rem;">
+        <div class="stat"><b>{{ student_count }}</b><span>Enrolled Students</span></div>
+        <div class="stat"><b>{{ warden_count }}</b><span>Wardens</span></div>
+        <div class="stat"><b>{{ maint_count }}</b><span>Maintenance Staff</span></div>
+        <div class="stat"><b>4</b><span>Sharing Tiers</span></div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="settings-tabs">
+        <a href="?tab=student" class="tab-link {% if tab == 'student' %}active{% endif %}">
+            <span>🎓</span> Student Settings &amp; Add
+        </a>
+        <a href="?tab=warden" class="tab-link {% if tab == 'warden' %}active{% endif %}">
+            <span>🛡️</span> Warden Management
+        </a>
+        <a href="?tab=maintenance" class="tab-link {% if tab == 'maintenance' %}active{% endif %}">
+            <span>🧰</span> Maintenance Crew
+        </a>
+        <a href="?tab=general" class="tab-link {% if tab == 'general' %}active{% endif %}">
+            <span>🏢</span> General &amp; Campus Profile
+        </a>
+    </div>
+
+    <!-- TAB 1: STUDENT SETTINGS -->
+    {% if tab == 'student' %}
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(460px, 1fr)); gap: 1.5rem; align-items: start;">
+        <!-- Left Column: Fee Structure & Password Reset -->
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            <!-- Annual Fee Configuration -->
+            <div class="card glass">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
+                    <h2 style="margin: 0; font-size: 1.15rem; color: var(--navy);">Annual Room Fee Structure</h2>
+                    <span class="tag g">Dynamic Pricing</span>
+                </div>
+                <p style="color: var(--mute); font-size: 0.88rem; margin: 0 0 1.2rem; line-height: 1.5;">
+                    Define the annual fee rates charged per student by room sharing capacity. Changes instantly update invoices and receipts.
+                </p>
+
+                <form method="post" action="{% url 'settings_save_fees' %}">
+                    {% csrf_token %}
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.2rem;">
+                        <div>
+                            <label style="font-weight: 600; font-size: 0.88rem; color: var(--navy); display: block; margin-bottom: 4px;">Single Sharing (1 Bed)</label>
+                            <input name="fee_1" type="number" value="{{ fees.1 }}" required style="width: 100%; padding: 0.6rem 0.8rem; border-radius: 8px; border: 1px solid var(--line);">
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; font-size: 0.88rem; color: var(--navy); display: block; margin-bottom: 4px;">Double Sharing (2 Beds)</label>
+                            <input name="fee_2" type="number" value="{{ fees.2 }}" required style="width: 100%; padding: 0.6rem 0.8rem; border-radius: 8px; border: 1px solid var(--line);">
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; font-size: 0.88rem; color: var(--navy); display: block; margin-bottom: 4px;">Triple Sharing (3 Beds)</label>
+                            <input name="fee_3" type="number" value="{{ fees.3 }}" required style="width: 100%; padding: 0.6rem 0.8rem; border-radius: 8px; border: 1px solid var(--line);">
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; font-size: 0.88rem; color: var(--navy); display: block; margin-bottom: 4px;">Quad Sharing (4 Beds)</label>
+                            <input name="fee_4" type="number" value="{{ fees.4 }}" required style="width: 100%; padding: 0.6rem 0.8rem; border-radius: 8px; border: 1px solid var(--line);">
+                        </div>
+                    </div>
+                    <button class="btn" style="width: 100%; justify-content: center;">Save Fee Structure</button>
+                </form>
+            </div>
+
+            <!-- Student Password Reset -->
+            <div class="card glass">
+                <h2 style="margin: 0 0 0.5rem; font-size: 1.15rem; color: var(--navy);">Reset Student Password</h2>
+                <p style="color: var(--mute); font-size: 0.88rem; margin: 0 0 1.2rem;">
+                    Directly change credentials for any enrolled student if they forgot their password.
+                </p>
+                <form method="post" action="{% url 'settings_reset_pw' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="tab" value="student">
+                    <p>
+                        <label style="font-weight: 600; font-size: 0.88rem; color: var(--navy); display: block; margin-bottom: 4px;">Select Student</label>
+                        <select name="username" required style="width: 100%; padding: 0.6rem 0.8rem; border-radius: 8px; border: 1px solid var(--line);">
+                            {% for s in students %}
+                            <option value="{{ s.reg_no }}">{{ s.name }} ({{ s.reg_no }}) - {{ s.course }} Year {{ s.year }}</option>
+                            {% endfor %}
+                        </select>
+                    </p>
+                    <p>
+                        <label style="font-weight: 600; font-size: 0.88rem; color: var(--navy); display: block; margin-bottom: 4px;">New Password</label>
+                        <span class="pw" style="display: flex; gap: 0.5rem; align-items: center; width: 100%;">
+                            <input name="new_password" type="password" required placeholder="e.g. Pass@123" style="width: 100%; padding: 0.6rem 0.8rem; border-radius: 8px; border: 1px solid var(--line);">
+                            <button type="button" class="link" style="background: none; border: 0; color: #1d6fd8; cursor: pointer; font-weight: 600; padding: 0.3rem 0.5rem;">Show</button>
+                        </span>
+                        <small style="color: var(--mute); font-size: 0.82rem; margin-top: 4px; display: block;">Must start with a capital letter and include at least one number &amp; special character.</small>
+                    </p>
+                    <button class="btn" style="width: 100%; justify-content: center;">Update Student Password</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Right Column: Direct Add Student -->
+        <div class="card glass">
+            <h2 style="margin: 0 0 0.5rem; font-size: 1.15rem; color: var(--navy);">Directly Add / Enroll Student</h2>
+            <p style="color: var(--mute); font-size: 0.88rem; margin: 0 0 1.2rem;">
+                Administratively register a new hostel resident. Their login account will be generated automatically.
+            </p>
+
+            <form method="post" action="{% url 'settings_add_student' %}">
+                {% csrf_token %}
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; margin-bottom: 0.9rem;">
+                    <div>
+                        <label style="font-weight: 600; font-size: 0.86rem; color: var(--navy); display: block; margin-bottom: 3px;">Full Name *</label>
+                        <input name="name" required placeholder="e.g. Rahul Sharma" style="width: 100%; padding: 0.55rem 0.75rem; border-radius: 8px; border: 1px solid var(--line);">
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; font-size: 0.86rem; color: var(--navy); display: block; margin-bottom: 3px;">Register Number (ID) *</label>
+                        <input name="reg_no" required placeholder="e.g. BCA125" style="width: 100%; padding: 0.55rem 0.75rem; border-radius: 8px; border: 1px solid var(--line);">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.9rem; margin-bottom: 0.9rem;">
+                    <div>
+                        <label style="font-weight: 600; font-size: 0.86rem; color: var(--navy); display: block; margin-bottom: 3px;">Gender *</label>
+                        <select name="gender" required style="width: 100%; padding: 0.55rem 0.75rem; border-radius: 8px; border: 1px solid var(--line);">
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; font-size: 0.86rem; color: var(--navy); display: block; margin-bottom: 3px;">Course *</label>
+                        <select name="course" required style="width: 100%; padding: 0.55rem 0.75rem; border-radius: 8px; border: 1px solid var(--line);">
+                            {% for c in courses %}
+                            <option value="{{ c }}">{{ c }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; font-size: 0.86rem; color: var(--navy); display: block; margin-bottom: 3px;">Year *</label>
+                        <select name="year" required style="width: 100%; padding: 0.55rem 0.75rem; border-radius: 8px; border: 1px solid var(--line);">
+                            <option value="1">1st Year</option>
+                            <option value="2">2nd Year</option>
+                            <option value="3">3rd Year</option>
+                            <option value="4">4th Year</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; margin-bottom: 0.9rem;">
+                    <div>
+                        <label style="font-weight: 600; font-size: 0.86rem; color: var(--navy); display: block; margin-bottom: 3px;">Date of Birth *</label>
+                        <input name="dob" type="date" required style="width: 100%; padding: 0.55rem 0.75rem; border-radius: 8px; border: 1px solid var(--line);">
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; font-size: 0.86rem; color: var(--navy); display: block; margin-bottom: 3px;">Phone (10 digits) *</label>
+                        <input name="phone" pattern="\d{10}" maxlength="10" required placeholder="9876543210" style="width: 100%; padding: 0.55rem 0.75rem; border-radius: 8px; border: 1px solid var(--line);">
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 0.9rem;">
+                    <label style="font-weight: 600; font-size: 0.86rem; color: var(--navy); display: block; margin-bottom: 3px;">Student Email *</label>
+                    <input name="email" type="email" required placeholder="student@example.com" style="width: 100%; padding: 0.55rem 0.75rem; border-radius: 8px; border: 1px solid var(--line);">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; margin-bottom: 0.9rem;">
+                    <div>
+                        <label style="font-weight: 600; font-size: 0.86rem; color: var(--navy); display: block; margin-bottom: 3px;">Guardian Name *</label>
+                        <input name="guardian_name" required placeholder="e.g. Suresh Kumar" style="width: 100%; padding: 0.55rem 0.75rem; border-radius: 8px; border: 1px solid var(--line);">
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; font-size: 0.86rem; color: var(--navy); display: block; margin-bottom: 3px;">Guardian Phone *</label>
+                        <input name="guardian_phone" pattern="\d{10}" maxlength="10" required placeholder="9876543211" style="width: 100%; padding: 0.55rem 0.75rem; border-radius: 8px; border: 1px solid var(--line);">
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 0.9rem;">
+                    <label style="font-weight: 600; font-size: 0.86rem; color: var(--navy); display: block; margin-bottom: 3px;">Home Address</label>
+                    <textarea name="address" rows="2" placeholder="City, State" style="width: 100%; padding: 0.55rem 0.75rem; border-radius: 8px; border: 1px solid var(--line);"></textarea>
+                </div>
+
+                <div style="margin-bottom: 1.2rem;">
+                    <label style="font-weight: 600; font-size: 0.86rem; color: var(--navy); display: block; margin-bottom: 3px;">Student Initial Password *</label>
+                    <span class="pw" style="display: flex; gap: 0.5rem; align-items: center; width: 100%;">
+                        <input name="password" type="password" required placeholder="e.g. Pass@123" style="width: 100%; padding: 0.55rem 0.75rem; border-radius: 8px; border: 1px solid var(--line);">
+                        <button type="button" class="link" style="background: none; border: 0; color: #1d6fd8; cursor: pointer; font-weight: 600; padding: 0.3rem 0.5rem;">Show</button>
+                    </span>
+                </div>
+
+                <button class="btn" style="width: 100%; justify-content: center;">+ Enroll New Student</button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- TAB 2: WARDEN MANAGEMENT -->
+    {% if tab == 'warden' %}
+    <div style="display: flex; flex-direction: column; gap: 1.6rem;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 1.5rem; align-items: start;">
+            <!-- Create Warden Account -->
+            <div class="card glass">
+                <h2 style="margin: 0 0 0.5rem; font-size: 1.15rem; color: var(--navy);">Add New Warden Account</h2>
+                <p style="color: var(--mute); font-size: 0.88rem; margin: 0 0 1.2rem;">
+                    Grant staff access to room allocation, gate passes, leaves, and visitor approvals.
+                </p>
+
+                <form method="post" action="{% url 'settings_add_staff' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="role" value="warden">
+                    <p>
+                        <label style="font-weight: 600; font-size: 0.88rem; color: var(--navy); display: block; margin-bottom: 4px;">Full Name *</label>
+                        <input name="name" required placeholder="e.g. Dr. Rajeshwari V" style="width: 100%; padding: 0.6rem 0.8rem; border-radius: 8px; border: 1px solid var(--line);">
+                    </p>
+                    <p>
+                        <label style="font-weight: 600; font-size: 0.88rem; color: var(--navy); display: block; margin-bottom: 4px;">Username *</label>
+                        <input name="username" required placeholder="e.g. warden_girls" style="width: 100%; padding: 0.6rem 0.8rem; border-radius: 8px; border: 1px solid var(--line);">
+                    </p>
+                    <p>
+                        <label style="font-weight: 600; font-size: 0.88rem; color: var(--navy); display: block; margin-bottom: 4px;">Assigned Wing / Shift</label>
+                        <input name="extra" placeholder="e.g. Girls Wing - Floor 2" style="width: 100%; padding: 0.6rem 0.8rem; border-radius: 8px; border: 1px solid var(--line);">
+                    </p>
+                    <p>
+                        <label style="font-weight: 600; font-size: 0.88rem; color: var(--navy); display: block; margin-bottom: 4px;">Password *</label>
+                        <span class="pw" style="display: flex; gap: 0.5rem; align-items: center; width: 100%;">
+                            <input name="password" type="password" required placeholder="e.g. Warden@123" style="width: 100%; padding: 0.6rem 0.8rem; border-radius: 8px; border: 1px solid var(--line);">
+                            <button type="button" class="link" style="background: none; border: 0; color: #1d6fd8; cursor: pointer; font-weight: 600; padding: 0.3rem 0.5rem;">Show</button>
+                        </span>
+                        <small style="color: var(--mute); font-size: 0.82rem; margin-top: 4px; display: block;">First letter capital, at least one number &amp; special character.</small>
+                    </p>
+                    <button class="btn" style="width: 100%; justify-content: center;">+ Create Warden Account</button>
+                </form>
+            </div>
+
+            <!-- Reset Warden Password -->
+            <div class="card glass">
+                <h2 style="margin: 0 0 0.5rem; font-size: 1.15rem; color: var(--navy);">Reset Warden Password</h2>
+                <p style="color: var(--mute); font-size: 0.88rem; margin: 0 0 1.2rem;">
+                    Update login credentials for active warden staff.
+                </p>
+                <form method="post" action="{% url 'settings_reset_pw' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="tab" value="warden">
+                    <p>
+                        <label style="font-weight: 600; font-size: 0.88rem; color: var(--navy); display: block; margin-bottom: 4px;">Select Warden</label>
+                        <select name="username" required style="width: 100%; padding: 0.6rem 0.8rem; border-radius: 8px; border: 1px solid var(--line);">
+                            {% for w in wardens %}
+                            <option value="{{ w.user.username }}">{{ w.user.first_name|default:w.user.username }} ({{ w.user.username }})</option>
+                            {% endfor %}
+                        </select>
+                    </p>
+                    <p>
+                        <label style="font-weight: 600; font-size: 0.88rem; color: var(--navy); display: block; margin-bottom: 4px;">New Password</label>
+                        <span class="pw" style="display: flex; gap: 0.5rem; align-items: center; width: 100%;">
+                            <input name="new_password" type="password" required placeholder="e.g. NewPass@123" style="width: 100%; padding: 0.6rem 0.8rem; border-radius: 8px; border: 1px solid var(--line);">
+                            <button type="button" class="link" style="background: none; border: 0; color: #1d6fd8; cursor: pointer; font-weight: 600; padding: 0.3rem 0.5rem;">Show</button>
+                        </span>
+                    </p>
+                    <button class="btn" style="width: 100%; justify-content: center;">Update Warden Password</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Current Wardens Directory Table -->
+        <div class="card glass" style="padding: 0; overflow: hidden;">
+            <div style="padding: 1.2rem 1.4rem; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h2 style="margin: 0; font-size: 1.1rem; color: var(--navy);">Active Wardens Directory</h2>
+                    <span style="font-size: 0.86rem; color: var(--mute);">Hostel supervisors with administrative privileges</span>
+                </div>
+                <span class="tag g">{{ wardens.count }} Active</span>
+            </div>
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: #f8fafc; text-align: left;">
+                        <th style="padding: 0.85rem 1.2rem; border-bottom: 1px solid var(--line);">Warden Name</th>
+                        <th style="padding: 0.85rem 1.2rem; border-bottom: 1px solid var(--line);">Username</th>
+                        <th style="padding: 0.85rem 1.2rem; border-bottom: 1px solid var(--line);">Account Status</th>
+                        <th style="padding: 0.85rem 1.2rem; border-bottom: 1px solid var(--line); text-align: right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for w in wardens %}
+                    <tr style="border-bottom: 1px solid var(--line);">
+                        <td style="padding: 0.85rem 1.2rem; font-weight: 600;">{{ w.user.first_name|default:w.user.username }}</td>
+                        <td style="padding: 0.85rem 1.2rem;"><code>{{ w.user.username }}</code></td>
+                        <td style="padding: 0.85rem 1.2rem;">
+                            <span class="tag {% if w.user.is_active %}g{% else %}r{% endif %}">
+                                {% if w.user.is_active %}Active{% else %}Disabled{% endif %}
+                            </span>
+                        </td>
+                        <td style="padding: 0.85rem 1.2rem; text-align: right;">
+                            <form method="post" action="{% url 'stoggle' w.user.id %}" style="display: inline;">
+                                {% csrf_token %}
+                                <button class="btn sm {% if w.user.is_active %}no{% endif %}">
+                                    {% if w.user.is_active %}Disable{% else %}Enable{% endif %}
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" style="padding: 2rem; text-align: center; color: var(--mute);">No warden accounts found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- TAB 3: MAINTENANCE MANAGEMENT -->
+    {% if tab == 'maintenance' %}
+    <div style="display: flex; flex-direction: column; gap: 1.6rem;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 1.5rem; align-items: start;">
+            <!-- Create Maintenance Staff -->
+            <div class="card glass">
+                <h2 style="margin: 0 0 0.5rem; font-size: 1.15rem; color: var(--navy);">Add Maintenance Personnel</h2>
+                <p style="color: var(--mute); font-size: 0.88rem; margin: 0 0 1.2rem;">
+                    Grant access for electricians, plumbers, network engineers, and handymen.
+                </p>
+
+                <form method="post" action="{% url 'settings_add_staff' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="role" value="maintenance">
+                    <p>
+                        <label style="font-weight: 600; font-size: 0.88rem; color: var(--navy); display: block; margin-bottom: 4px;">Staff Name *</label>
+                        <input name="name" required placeholder="e.g. Ramesh Kumar" style="width: 100%; padding: 0.6rem 0.8rem; border-radius: 8px; border: 1px solid var(--line);">
+                    </p>
+                    <p>
+                        <label style="font-weight: 600; font-size: 0.88rem; color: var(--navy); display: block; margin-bottom: 4px;">Username *</label>
+                        <input name="username" required placeholder="e.g. maint_elec" style="width: 100%; padding: 0.6rem 0.8rem; border-radius: 8px; border: 1px solid var(--line);">
+                    </p>
+                    <p>
+                        <label style="font-weight: 600; font-size: 0.88rem; color: var(--navy); display: block; margin-bottom: 4px;">Trade / Specialty</label>
+                        <select name="extra" style="width: 100%; padding: 0.6rem 0.8rem; border-radius: 8px; border: 1px solid var(--line);">
+                            <option value="Electrical">Electrician &amp; Lighting</option>
+                            <option value="Plumbing">Plumber &amp; Water Systems</option>
+                            <option value="WiFi">Wi-Fi &amp; Network Hardware</option>
+                            <option value="Carpentry">Carpentry &amp; Furniture</option>
+                            <option value="General">General Maintenance Crew</option>
+                        </select>
+                    </p>
+                    <p>
+                        <label style="font-weight: 600; font-size: 0.88rem; color: var(--navy); display: block; margin-bottom: 4px;">Password *</label>
+                        <span class="pw" style="display: flex; gap: 0.5rem; align-items: center; width: 100%;">
+                            <input name="password" type="password" required placeholder="e.g. Maint@123" style="width: 100%; padding: 0.6rem 0.8rem; border-radius: 8px; border: 1px solid var(--line);">
+                            <button type="button" class="link" style="background: none; border: 0; color: #1d6fd8; cursor: pointer; font-weight: 600; padding: 0.3rem 0.5rem;">Show</button>
+                        </span>
+                    </p>
+                    <button class="btn" style="width: 100%; justify-content: center;">+ Create Maintenance Account</button>
+                </form>
+            </div>
+
+            <!-- Reset Maintenance Password -->
+            <div class="card glass">
+                <h2 style="margin: 0 0 0.5rem; font-size: 1.15rem; color: var(--navy);">Reset Maintenance Password</h2>
+                <p style="color: var(--mute); font-size: 0.88rem; margin: 0 0 1.2rem;">
+                    Update password for maintenance technicians or support staff.
+                </p>
+                <form method="post" action="{% url 'settings_reset_pw' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="tab" value="maintenance">
+                    <p>
+                        <label style="font-weight: 600; font-size: 0.88rem; color: var(--navy); display: block; margin-bottom: 4px;">Select Staff</label>
+                        <select name="username" required style="width: 100%; padding: 0.6rem 0.8rem; border-radius: 8px; border: 1px solid var(--line);">
+                            {% for m in maint_staff %}
+                            <option value="{{ m.user.username }}">{{ m.user.first_name|default:m.user.username }} ({{ m.user.username }})</option>
+                            {% endfor %}
+                        </select>
+                    </p>
+                    <p>
+                        <label style="font-weight: 600; font-size: 0.88rem; color: var(--navy); display: block; margin-bottom: 4px;">New Password</label>
+                        <span class="pw" style="display: flex; gap: 0.5rem; align-items: center; width: 100%;">
+                            <input name="new_password" type="password" required placeholder="e.g. Work@123" style="width: 100%; padding: 0.6rem 0.8rem; border-radius: 8px; border: 1px solid var(--line);">
+                            <button type="button" class="link" style="background: none; border: 0; color: #1d6fd8; cursor: pointer; font-weight: 600; padding: 0.3rem 0.5rem;">Show</button>
+                        </span>
+                    </p>
+                    <button class="btn" style="width: 100%; justify-content: center;">Update Maintenance Password</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Current Maintenance Crew Directory Table -->
+        <div class="card glass" style="padding: 0; overflow: hidden;">
+            <div style="padding: 1.2rem 1.4rem; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h2 style="margin: 0; font-size: 1.1rem; color: var(--navy);">Maintenance Crew Directory</h2>
+                    <span style="font-size: 0.86rem; color: var(--mute);">Technicians assigned to resolve resident complaints &amp; work tickets</span>
+                </div>
+                <span class="tag g">{{ maint_staff.count }} Crew Members</span>
+            </div>
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: #f8fafc; text-align: left;">
+                        <th style="padding: 0.85rem 1.2rem; border-bottom: 1px solid var(--line);">Technician Name</th>
+                        <th style="padding: 0.85rem 1.2rem; border-bottom: 1px solid var(--line);">Username</th>
+                        <th style="padding: 0.85rem 1.2rem; border-bottom: 1px solid var(--line);">Status</th>
+                        <th style="padding: 0.85rem 1.2rem; border-bottom: 1px solid var(--line); text-align: right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in maint_staff %}
+                    <tr style="border-bottom: 1px solid var(--line);">
+                        <td style="padding: 0.85rem 1.2rem; font-weight: 600;">{{ m.user.first_name|default:m.user.username }}</td>
+                        <td style="padding: 0.85rem 1.2rem;"><code>{{ m.user.username }}</code></td>
+                        <td style="padding: 0.85rem 1.2rem;">
+                            <span class="tag {% if m.user.is_active %}g{% else %}r{% endif %}">
+                                {% if m.user.is_active %}Active{% else %}Disabled{% endif %}
+                            </span>
+                        </td>
+                        <td style="padding: 0.85rem 1.2rem; text-align: right;">
+                            <form method="post" action="{% url 'stoggle' m.user.id %}" style="display: inline;">
+                                {% csrf_token %}
+                                <button class="btn sm {% if m.user.is_active %}no{% endif %}">
+                                    {% if m.user.is_active %}Disable{% else %}Enable{% endif %}
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" style="padding: 2rem; text-align: center; color: var(--mute);">No maintenance staff accounts found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- TAB 4: GENERAL CAMPUS SETTINGS -->
+    {% if tab == 'general' %}
+    <div style="max-width: 680px; margin: 0 auto;">
+        <div class="card glass">
+            <h2 style="margin: 0 0 0.5rem; font-size: 1.15rem; color: var(--navy);">Hostel Campus &amp; Policy Settings</h2>
+            <p style="color: var(--mute); font-size: 0.88rem; margin: 0 0 1.4rem;">
+                Configure the primary institutional details, emergency contacts, and evening curfew rules.
+            </p>
+
+            <form method="post" action="{% url 'settings_save_general' %}">
+                {% csrf_token %}
+                <p>
+                    <label style="font-weight: 600; font-size: 0.88rem; color: var(--navy); display: block; margin-bottom: 4px;">Hostel Name / Institution</label>
+                    <input name="hostel_name" value="{{ general.hostel_name }}" required style="width: 100%; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid var(--line);">
+                </p>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <p>
+                        <label style="font-weight: 600; font-size: 0.88rem; color: var(--navy); display: block; margin-bottom: 4px;">Evening Curfew Time (24h)</label>
+                        <input name="curfew_time" value="{{ curfew.time }}" placeholder="18:30" required style="width: 100%; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid var(--line);">
+                    </p>
+                    <p>
+                        <label style="font-weight: 600; font-size: 0.88rem; color: var(--navy); display: block; margin-bottom: 4px;">Emergency Helpline Phone</label>
+                        <input name="contact_phone" value="{{ general.contact_phone }}" required style="width: 100%; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid var(--line);">
+                    </p>
+                </div>
+
+                <p>
+                    <label style="font-weight: 600; font-size: 0.88rem; color: var(--navy); display: block; margin-bottom: 4px;">Official Support Email</label>
+                    <input name="contact_email" type="email" value="{{ general.contact_email }}" required style="width: 100%; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid var(--line);">
+                </p>
+
+                <p>
+                    <label style="font-weight: 600; font-size: 0.88rem; color: var(--navy); display: block; margin-bottom: 4px;">Hostel Address &amp; Location</label>
+                    <textarea name="campus_address" rows="3" style="width: 100%; padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid var(--line);">{{ general.campus_address }}</textarea>
+                </p>
+
+                <button class="btn" style="width: 100%; justify-content: center; padding: 0.75rem; font-size: 0.96rem;">Save Campus Settings</button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,54 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Hostel Sphere</title>
+    <link rel="icon" type="image/svg+xml" href="{% url 'favicon' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'style.css' %}?v=5">
+</head>
+
+<body>
+    {% if user.is_authenticated %}
+    <div class="shell">
+        <nav class="side" id="nav">
+            <div class="brand">Hostel Sphere</div>
+            <div class="me"><small>Signed in as</small><b>{{ me }}</b><span>{{ role|title }}</span></div>
+            {% for u, l, i in nav %}
+            <a href="{% url u %}" class="{% if request.resolver_match.url_name == u %}on{% endif %}">
+                <span>{{ i }}</span>{{ l }}
+            </a>
+            {% endfor %}
+            <a href="{% url 'logout' %}" class="out"><span>↩</span>Log out</a>
+        </nav>
+        <main>
+            <button id="menu" class="menu" type="button">Menu</button>
+            {% for m in messages %}
+            <div class="msg {{ m.tags }}" role="status">{{ m }}</div>
+            {% endfor %}
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    {% else %}
+    <div class="stage">
+        <div class="auth {% block cls %}{% endblock %}">
+            {% block auth_header %}
+            <div class="brand">Hostel Sphere</div>
+            {% endblock %}
+            {% for m in messages %}
+            <div class="msg {{ m.tags }}" role="status">{{ m }}</div>
+            {% endfor %}
+            {% block auth %}{% endblock %}
+        </div>
+    </div>
+    {% endif %}
+    <script src="{% static 'app.js' %}?v=3"></script>
+</body>
+
+</html>

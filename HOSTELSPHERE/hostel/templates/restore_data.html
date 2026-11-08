@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block auth %}
+<div class="split">
+    <div class="pitch">
+        <h1>Hostel Sphere</h1>
+        <p>Data recovery and system management.</p>
+    </div>
+    <div>
+        <div class="card glass">
+            <h2>Restore Data</h2>
+            <p style="color: var(--mute); line-height: 1.5; margin-bottom: 1.2rem;">
+                Please sign in to view and restore your deleted records.
+            </p>
+            <a href="{% url 'login' %}" class="btn" style="display: block; text-align: center; text-decoration: none;">Sign In</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div style="max-width: 960px; margin: 0 auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.8rem; margin-bottom: 1.2rem;">
+        <div>
+            <h1 style="margin: 0 0 0.3rem;">Restore Data</h1>
+            <p style="color: var(--mute); margin: 0; font-size: 0.92rem;">
+                Recover deleted records (rooms, students, complaints, notices, leaves, visitor requests) or remove them permanently.
+            </p>
+        </div>
+        {% if items %}
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <form method="post" action="{% url 'restore_all' %}" onsubmit="return confirm('Restore all deleted items?');">
+                {% csrf_token %}
+                <button class="btn sm" style="display: inline-flex; align-items: center; gap: 4px;">
+                    <span>🔄</span> Restore All
+                </button>
+            </form>
+            <form method="post" action="{% url 'purge_all' %}" onsubmit="return confirm('Permanently delete all items in trash? This cannot be undone.');">
+                {% csrf_token %}
+                <button class="btn sm no" style="display: inline-flex; align-items: center; gap: 4px;">
+                    <span>🗑️</span> Empty Trash
+                </button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="stats" style="margin-bottom: 1.5rem;">
+        <div class="stat"><b>{{ total_count }}</b><span>Deleted Items</span></div>
+        <div class="stat"><b>{{ rooms_count }}</b><span>Rooms</span></div>
+        <div class="stat"><b>{{ complaints_count }}</b><span>Complaints</span></div>
+        <div class="stat"><b>{{ other_count }}</b><span>Other Records</span></div>
+    </div>
+
+    {% if items %}
+    <div class="card glass" style="padding: 0; overflow: hidden;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr>
+                    <th style="padding: 0.85rem 1rem; text-align: left; border-bottom: 1px solid var(--line);">Type</th>
+                    <th style="padding: 0.85rem 1rem; text-align: left; border-bottom: 1px solid var(--line);">Record / Title</th>
+                    <th style="padding: 0.85rem 1rem; text-align: left; border-bottom: 1px solid var(--line);">Details</th>
+                    <th style="padding: 0.85rem 1rem; text-align: left; border-bottom: 1px solid var(--line);">Deleted by</th>
+                    <th style="padding: 0.85rem 1rem; text-align: left; border-bottom: 1px solid var(--line);">Deleted on</th>
+                    <th style="padding: 0.85rem 1rem; text-align: right; border-bottom: 1px solid var(--line);">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr style="border-bottom: 1px solid var(--line);">
+                    <td style="padding: 0.75rem 1rem; vertical-align: middle;">
+                        <span class="tag {% if item.model_name == 'Room' %}g{% elif item.model_name == 'Complaint' %}y{% elif item.model_name == 'Notice' %}{% elif item.model_name == 'Visitor' %}g{% else %}{% endif %}">
+                            {{ item.model_name }}
+                        </span>
+                    </td>
+                    <td style="padding: 0.75rem 1rem; vertical-align: middle; font-weight: 600;">
+                        {{ item.label }}
+                    </td>
+                    <td style="padding: 0.75rem 1rem; vertical-align: middle; color: var(--mute); font-size: 0.88rem;">
+                        {{ item.details|default:"-" }}
+                    </td>
+                    <td style="padding: 0.75rem 1rem; vertical-align: middle; font-size: 0.88rem;">
+                        {{ item.deleted_by|default:"System" }}
+                    </td>
+                    <td style="padding: 0.75rem 1rem; vertical-align: middle; color: var(--mute); font-size: 0.85rem; white-space: nowrap;">
+                        {{ item.deleted_at|date:"d M, h:i A" }}
+                    </td>
+                    <td style="padding: 0.75rem 1rem; vertical-align: middle; text-align: right;">
+                        <div style="display: inline-flex; gap: 0.4rem; justify-content: flex-end;">
+                            <form method="post" action="{% url 'restore_item' item.id %}" style="display: inline;" onsubmit="return confirm('Restore this {{ item.model_name|lower }}?');">
+                                {% csrf_token %}
+                                <button class="btn sm" style="display: inline-flex; align-items: center; gap: 3px;">
+                                    <span>🔄</span> Restore
+                                </button>
+                            </form>
+                            <form method="post" action="{% url 'purge_item' item.id %}" style="display: inline;" onsubmit="return confirm('Permanently delete this record? It cannot be recovered.');">
+                                {% csrf_token %}
+                                <button class="btn sm no" title="Delete permanently">
+                                    <span>🗑️</span>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card glass" style="text-align: center; padding: 3rem 1.5rem; margin-top: 1rem;">
+        <div style="font-size: 2.8rem; margin-bottom: 0.8rem;">📦</div>
+        <h2 style="margin: 0 0 0.5rem; font-size: 1.25rem;">No deleted records</h2>
+        <p style="color: var(--mute); max-width: 500px; margin: 0 auto; font-size: 0.94rem; line-height: 1.6;">
+            When records (rooms, students, complaints, notices, leaves, or visitor requests) are deleted, they will be safely kept here. You can view, restore, or permanently remove them at any time.
+        </p>
+        <div style="margin-top: 1.5rem;">
+            <a href="{% url 'dash' %}" class="btn" style="text-decoration: none;">Return to Dashboard</a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

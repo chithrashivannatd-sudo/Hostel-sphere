@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="max-width: 1060px; margin: 0 auto; padding-top: 0.5rem;">
+    <!-- Dashboard Header -->
+    <div class="warden-dash-header">
+        <h1 class="warden-dash-title">My dashboard</h1>
+
+        <!-- Pick Your Widgets Bar -->
+        <div class="warden-widget-bar">
+            <label class="warden-widget-pill">
+                <input type="checkbox" id="toggle-attention" checked data-target="widget-attention">
+                <span>Needs attention</span>
+            </label>
+            <label class="warden-widget-pill">
+                <input type="checkbox" id="toggle-occupancy" checked data-target="widget-occupancy">
+                <span>Occupancy</span>
+            </label>
+            <label class="warden-widget-pill">
+                <input type="checkbox" id="toggle-outnow" checked data-target="widget-outnow">
+                <span>Out now</span>
+            </label>
+            <label class="warden-widget-pill">
+                <input type="checkbox" id="toggle-menu" checked data-target="widget-menu">
+                <span>Menu</span>
+            </label>
+            <label class="warden-widget-pill">
+                <input type="checkbox" id="toggle-complaints" data-target="widget-complaints">
+                <span>Complaints</span>
+            </label>
+        </div>
+    </div>
+
+    <!-- 2-Column Responsive Dashboard Grid -->
+    <div class="warden-dash-grid">
+        <!-- LEFT COLUMN -->
+        <div class="warden-col-left">
+            <!-- WIDGET 1: Needs attention -->
+            <div id="widget-attention" class="warden-card">
+                <h2 class="warden-card-title">Needs attention</h2>
+                <div class="warden-attention-list">
+                    <a href="{% url 'leaves' %}" class="warden-attention-item">
+                        <span><span style="margin-right: 0.65rem;">📝</span> Leave requests</span>
+                        <span class="warden-badge-red">{{ counts.leaves }}</span>
+                    </a>
+                    <a href="{% url 'gate' %}" class="warden-attention-item">
+                        <span><span style="margin-right: 0.65rem;">🚪</span> Late check-ins</span>
+                        <span class="warden-badge-red">{{ counts.late_checkins }}</span>
+                    </a>
+                    <a href="{% url 'students' %}" class="warden-attention-item">
+                        <span><span style="margin-right: 0.65rem;">🛏️</span> Students without a room</span>
+                        <span class="warden-badge-red">{{ counts.unallocated }}</span>
+                    </a>
+                    <a href="{% url 'complaints' %}" class="warden-attention-item">
+                        <span><span style="margin-right: 0.65rem;">🛠️</span> Complaints to assign</span>
+                        <span class="warden-badge-red">{{ counts.complaints }}</span>
+                    </a>
+                    <a href="{% url 'visitors' %}" class="warden-attention-item">
+                        <span><span style="margin-right: 0.65rem;">👥</span> Visitors past 6 PM</span>
+                        <span class="warden-badge-red">{{ counts.visitors }}</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- WIDGET 2: Students out now -->
+            <div id="widget-outnow" class="warden-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.9rem;">
+                    <h2 class="warden-card-title" style="margin: 0;">Students out now</h2>
+                    <a href="{% url 'gate' %}" style="font-size: 0.85rem; color: var(--blue); text-decoration: none; font-weight: 600;">View all passes &rarr;</a>
+                </div>
+                <div class="warden-out-list">
+                    {% for st in students_out %}
+                    <div class="warden-out-item">
+                        <span class="warden-out-name">{{ st.name }}</span>
+                        <span class="warden-out-time">{{ st.time }}</span>
+                    </div>
+                    {% empty %}
+                    <div style="color: #64748b; font-size: 0.9rem; padding: 0.6rem 0;">All students are currently inside the hostel.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN -->
+        <div class="warden-col-right">
+            <!-- WIDGET 3: Beds occupied (Occupancy) -->
+            <div id="widget-occupancy" class="warden-card warden-donut-card">
+                <h2 class="warden-card-title" style="width: 100%; text-align: left; margin-bottom: 1.2rem;">Beds occupied</h2>
+                <div class="warden-donut-wrapper">
+                    <svg class="warden-donut-svg" width="160" height="160" viewBox="0 0 140 140" aria-label="Beds occupied {{ occ_pct }}%">
+                        <circle class="warden-donut-track" cx="70" cy="70" r="54" />
+                        <circle class="warden-donut-progress" cx="70" cy="70" r="54" stroke-dasharray="339.29" stroke-dashoffset="{{ donut_offset }}" />
+                    </svg>
+                    <div class="warden-donut-val">{{ occ_pct }}%</div>
+                </div>
+            </div>
+
+            <!-- WIDGET 4: Today's Menu -->
+            <div id="widget-menu" class="warden-menu-card">
+                <div class="warden-menu-header">
+                    <span>🍴</span> Today ({{ today_day }})
+                </div>
+                <div class="warden-menu-content">
+                    {{ menu_text }}
+                </div>
+            </div>
+
+            <!-- WIDGET 5: Complaints (Optional toggle) -->
+            <div id="widget-complaints" class="warden-card" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
+                    <h2 class="warden-card-title" style="margin: 0;">Open complaints</h2>
+                    <a href="{% url 'complaints' %}" style="font-size: 0.85rem; color: var(--blue); text-decoration: none; font-weight: 600;">Manage &rarr;</a>
+                </div>
+                <div>
+                    {% for c in recent_complaints %}
+                    <div style="padding: 0.55rem 0; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <b style="font-size: 0.9rem; color: #1e293b; display: block;">{{ c.title }}</b>
+                            <small style="color: #64748b;">{{ c.student.name }} · Room {{ c.student.room.number|default:"-" }}</small>
+                        </div>
+                        <span class="tag {% if c.status == 'Resolved' %}g{% elif c.status == 'In progress' %}y{% else %}r{% endif %}">{{ c.status }}</span>
+                    </div>
+                    {% empty %}
+                    <div style="color: #64748b; font-size: 0.88rem; padding: 0.5rem 0;">No active complaints.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Interactive Widget Toggle Script -->
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const toggleMap = {
+            "toggle-attention": "widget-attention",
+            "toggle-occupancy": "widget-occupancy",
+            "toggle-outnow": "widget-outnow",
+            "toggle-menu": "widget-menu",
+            "toggle-complaints": "widget-complaints"
+        };
+
+        // Load saved preferences if any
+        let savedPrefs = {};
+        try {
+            savedPrefs = JSON.parse(localStorage.getItem("warden_widget_prefs")) || {};
+        } catch (e) { }
+
+        Object.keys(toggleMap).forEach(function (toggleId) {
+            const chk = document.getElementById(toggleId);
+            const targetId = toggleMap[toggleId];
+            const el = document.getElementById(targetId);
+            if (!chk || !el) return;
+
+            // Apply saved pref or default
+            if (savedPrefs[toggleId] !== undefined) {
+                chk.checked = savedPrefs[toggleId];
+            }
+            el.style.display = chk.checked ? "" : "none";
+
+            // Update on toggle
+            chk.addEventListener("change", function () {
+                el.style.display = chk.checked ? "" : "none";
+                savedPrefs[toggleId] = chk.checked;
+                try {
+                    localStorage.setItem("warden_widget_prefs", JSON.stringify(savedPrefs));
+                } catch (e) { }
+            });
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.8rem;">
+    <h1 style="margin: 0;">Dashboard</h1>
+    <a href="{% url 'restore_data' %}" class="btn sm alt" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+        <span>🔄</span> Restore Data
+    </a>
+</div>
+
+<!-- 4 KPI Metric Cards -->
+<div class="stats dash-stats">
+    {% for c in stat_cards %}
+    <div class="stat">
+        <b>{{ c.val }}</b>
+        <span>{{ c.label }}</span>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Middle Row: Monthly Collections Chart & Beds Occupied Donut Chart -->
+<div class="dash-grid-2">
+    <!-- Fees collected by month -->
+    <div class="dash-card chart-card">
+        <div class="dash-card-header">
+            <h2 class="dash-card-title">Fees collected by month</h2>
+        </div>
+        <div class="chart-body">
+            <div class="chart-container">
+                {% for bar in monthly_chart %}
+                <div class="chart-bar-col">
+                    <div class="chart-bar-wrapper">
+                        <div class="chart-bar" data-height="{{ bar.height }}%">
+                            <span class="chart-tooltip">{{ bar.month }}: {{ bar.amount }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="chart-labels">
+                {% for bar in monthly_chart %}
+                <div class="chart-label">{{ bar.month }}</div>
+                {% endfor %}
+            </div>
+            <script>
+                document.querySelectorAll('.chart-bar[data-height]').forEach(function (bar) {
+                    bar.style.height = bar.getAttribute('data-height');
+                });
+            </script>
+        </div>
+    </div>
+
+    <!-- Beds occupied circular progress -->
+    <div class="dash-card donut-card">
+        <div class="dash-card-header">
+            <h2 class="dash-card-title">Beds occupied</h2>
+        </div>
+        <div class="donut-body">
+            <div class="donut-wrapper">
+                <svg class="donut-svg" width="160" height="160" viewBox="0 0 140 140"
+                    aria-label="Beds occupied {{ bed_pct }}%">
+                    <circle class="donut-track" cx="70" cy="70" r="54" />
+                    <circle class="donut-progress" cx="70" cy="70" r="54" stroke-dasharray="339.29"
+                        stroke-dashoffset="{{ donut_offset }}" />
+                </svg>
+                <div class="donut-center-val">{{ bed_pct }}%</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bottom Row: Recent Activity -->
+<div class="dash-card activity-card">
+    <div class="dash-card-header">
+        <h2 class="dash-card-title">Recent activity</h2>
+    </div>
+    <ul class="activity-list">
+        {% for act in activities %}
+        <li class="activity-item">
+            <span class="activity-desc">{{ act.text }}</span>
+            <span class="activity-time">{{ act.time }}</span>
+        </li>
+        {% empty %}
+        <li class="activity-item empty">
+            <span class="activity-desc">No recent activity recorded yet.</span>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}

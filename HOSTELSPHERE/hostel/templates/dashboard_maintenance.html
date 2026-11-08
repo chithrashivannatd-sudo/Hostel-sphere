@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="maint-dash-container">
+    <!-- Top Gradient Banner Card -->
+    <div class="maint-banner-card">
+        <h1 class="maint-banner-title">{{ unfinished_count }} jobs left today</h1>
+        <div class="maint-banner-sub">{{ finished_count }} of {{ total_count }} finished</div>
+        <div class="maint-progress-track">
+            <div class="maint-progress-bar" data-width="{{ progress_pct }}%"></div>
+        </div>
+    </div>
+
+    <!-- Main Job List Card -->
+    <div class="maint-job-card">
+        {% for job in jobs %}
+        <div class="maint-job-row">
+            <!-- Left: Avatar / Icon & Details -->
+            <div class="maint-job-left">
+                <div class="maint-avatar-icon trade-{{ job.trade|slugify }}" data-bg="{{ job.icon_bg }}">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                </div>
+                <div class="maint-job-info">
+                    <h3>{{ job.title }}</h3>
+                    <div class="maint-job-sub">{{ job.room_info }} · {{ job.trade }}</div>
+                </div>
+            </div>
+
+            <!-- Right: Priority Tag & Action Button -->
+            <div class="maint-job-right">
+                <span class="maint-prio prio-{{ job.prio|lower }}">{{ job.prio }}</span>
+
+                {% if job.status == "Open" %}
+                <form method="post" action="{% url 'cstatus' job.id %}" style="margin: 0;">
+                    {% csrf_token %}
+                    <input type="hidden" name="status" value="In progress">
+                    <input type="hidden" name="next" value="dash">
+                    <button class="maint-btn maint-btn-start">Start</button>
+                </form>
+                {% elif job.status == "In progress" %}
+                <form method="post" action="{% url 'cstatus' job.id %}" style="margin: 0;">
+                    {% csrf_token %}
+                    <input type="hidden" name="status" value="Resolved">
+                    <input type="hidden" name="next" value="dash">
+                    <button class="maint-btn maint-btn-done">Mark done</button>
+                </form>
+                {% else %}
+                <button class="maint-btn maint-btn-resolved" disabled>Done</button>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div style="padding: 2.5rem; text-align: center; color: var(--mute);">
+            No maintenance jobs scheduled for today. All facilities are working properly!
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+    document.querySelectorAll('.maint-progress-bar[data-width]').forEach(function (el) {
+        el.style.width = el.getAttribute('data-width');
+    });
+    document.querySelectorAll('.maint-avatar-icon[data-bg]').forEach(function (el) {
+        el.style.backgroundColor = el.getAttribute('data-bg');
+    });
+</script>
+{% endblock %}

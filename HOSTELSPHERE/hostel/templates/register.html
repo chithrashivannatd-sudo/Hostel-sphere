@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block cls %}wide{% endblock %}
+{% block auth %}
+<div class="card">
+    <h1>New student registration</h1>
+    <p class="hint">The warden allocates your room after you register.</p>
+    <form method="post">
+        {% csrf_token %}
+        {% for field in form %}
+        {% if field.name == 'password' or field.name == 'confirm' %}
+        <p>
+            <label for="{{ field.id_for_label }}">{{ field.label }}:</label>
+            <span class="pw" style="display: flex; gap: 0.5rem; align-items: center; width: 100%;">
+                {{ field }}
+                <button type="button" class="link toggle-pw" data-target="{{ field.id_for_label }}"
+                    style="background: none; border: 0; color: #1d6fd8; cursor: pointer; font-weight: 600; white-space: nowrap; padding: 0.3rem 0.5rem; font-size: 0.9rem; flex-shrink: 0;">Show</button>
+            </span>
+            {% if field.help_text %}
+            <span class="helptext"
+                style="display: block; color: var(--mute); font-size: 0.83rem; margin-top: 0.35rem;">{{ field.help_text
+                }}</span>
+            {% endif %}
+            {% if field.errors %}
+            <span class="errorlist" style="color: var(--bad); font-size: 0.85rem; display: block;">{{ field.errors
+                }}</span>
+            {% endif %}
+        </p>
+        {% else %}
+        <p>
+            <label for="{{ field.id_for_label }}">{{ field.label }}:</label>
+            {{ field }}
+            {% if field.help_text %}
+            <span class="helptext"
+                style="display: block; color: var(--mute); font-size: 0.83rem; margin-top: 0.35rem;">{{ field.help_text
+                }}</span>
+            {% endif %}
+            {% if field.errors %}
+            <span class="errorlist" style="color: var(--bad); font-size: 0.85rem; display: block;">{{ field.errors
+                }}</span>
+            {% endif %}
+        </p>
+        {% endif %}
+        {% endfor %}
+        <p style="margin-top: 1.2rem;">
+            <button class="btn">Register</button>
+            <a href="{% url 'login' %}" style="margin-left: 0.8rem;">I already have an account</a>
+        </p>
+    </form>
+</div>
+
+<script>
+    document.querySelectorAll('.toggle-pw').forEach(function (btn) {
+        btn.onclick = function (e) {
+            e.preventDefault();
+            var targetId = this.getAttribute('data-target');
+            var inp = document.getElementById(targetId);
+            if (inp) {
+                var isPw = inp.type === 'password';
+                inp.type = isPw ? 'text' : 'password';
+                this.textContent = isPw ? 'Hide' : 'Show';
+            }
+        };
+    });
+</script>
+{% endblock %}

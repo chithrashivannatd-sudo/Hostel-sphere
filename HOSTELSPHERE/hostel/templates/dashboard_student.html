@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="max-width: 1040px; margin: 0 auto; padding-top: 0.5rem;">
+    <!-- Profile & Fee Badge Header -->
+    <div class="student-dash-header">
+        <div class="student-dash-profile">
+            <div class="student-dash-avatar">
+                {{ initials }}
+            </div>
+            <div class="student-dash-info">
+                <h1>Welcome, {{ s.name }}</h1>
+                <div class="student-dash-sub">{{ s.reg_no }} · {{ s.course }} year {{ s.year }} · Room {{ room_num }}</div>
+            </div>
+        </div>
+        <div style="display: flex; gap: 0.65rem; align-items: center; flex-wrap: wrap;">
+            <a href="{% url 'student_id' %}" class="student-dash-id-btn">
+                🪪 Student ID
+            </a>
+            <div class="student-dash-badge">
+                Fee {{ pct_paid }}% paid
+            </div>
+        </div>
+    </div>
+
+    <!-- 6 Interactive Cards Grid (Matching Exact Screenshot Layout) -->
+    <div class="student-dash-grid">
+        <!-- TOP ROW -->
+        <!-- 1. FEE Card -->
+        <a href="{% url 'fees' %}" class="student-card student-card-fee">
+            <div>
+                <div class="student-card-label">FEE</div>
+                <div class="student-card-val">₹{{ pending_fee }}</div>
+                <div class="student-card-sub">pending · due {{ due_date }}</div>
+            </div>
+            <div class="student-progress-track">
+                <div class="student-progress-bar" data-width="{{ pct_paid }}%"></div>
+            </div>
+        </a>
+
+        <!-- 2. ROOM Card -->
+        <a href="{% url 'rooms' %}" class="student-card student-card-room">
+            <div>
+                <div class="student-card-label">ROOM</div>
+                <div class="student-card-val">{{ room_num }}</div>
+            </div>
+            <div class="student-card-sub">{{ room_sub }}</div>
+        </a>
+
+        <!-- 3. GATE PASS Card -->
+        <a href="{% url 'gate' %}" class="student-card student-card-gate">
+            <div>
+                <div class="student-card-label">GATE PASS</div>
+                <div class="student-card-val">{{ gate_status }}</div>
+            </div>
+            <div class="student-card-sub">{{ gate_sub }}</div>
+        </a>
+
+        <!-- BOTTOM ROW -->
+        <!-- 4. FOOD / TODAY Card -->
+        <a href="{% url 'food' %}" class="student-card student-card-food">
+            <div class="student-card-label">TODAY · {{ day_name }}</div>
+            <div>
+                {% for item in menu_items %}
+                <div class="student-food-item">{{ item }}</div>
+                {% endfor %}
+            </div>
+        </a>
+
+        <!-- 5. COMPLAINT Card -->
+        <a href="{% url 'complaints' %}" class="student-card student-card-complaint">
+            <div>
+                <div class="student-card-label">COMPLAINT</div>
+                <div class="student-card-val-sm">{{ complaint_title }}</div>
+            </div>
+            <div class="student-card-sub">{{ complaint_status }}</div>
+        </a>
+
+        <!-- 6. NOTICE Card -->
+        <a href="{% url 'notices' %}" class="student-card student-card-notice">
+            <div class="student-card-label">NOTICE</div>
+            <div class="student-notice-text">{{ notice_text }}</div>
+        </a>
+    </div>
+</div>
+
+<script>
+    document.querySelectorAll('.student-progress-bar[data-width]').forEach(function(el) {
+        el.style.width = el.getAttribute('data-width');
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,496 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Fee Receipt - {{ rec_no }} - {{ student.name }}</title>
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+    <style>
+        body.receipt-page {
+            background: #eef3f9;
+            margin: 0;
+            padding: 2rem 1rem;
+            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+            color: #18263a;
+        }
+
+        .receipt-toolbar {
+            max-width: 800px;
+            margin: 0 auto 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .receipt-toolbar a,
+        .receipt-toolbar button {
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .receipt-card {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 8px 30px rgba(13, 36, 64, 0.08);
+            border: 1px solid #dfe7f1;
+            padding: 2.5rem 3rem;
+            position: relative;
+            box-sizing: border-box;
+        }
+
+        .receipt-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #edf2f7;
+            padding-bottom: 1.5rem;
+            margin-bottom: 1.8rem;
+        }
+
+        .brand-title {
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: #0d2440;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            margin: 0 0 3px;
+        }
+
+        .brand-title:before {
+            content: "";
+            width: 11px;
+            height: 11px;
+            background: #f59e0b;
+            border-radius: 3px;
+            display: inline-block;
+        }
+
+        .brand-subtitle {
+            font-size: 0.8rem;
+            color: #62748c;
+            margin: 0;
+        }
+
+        .receipt-badge-box {
+            text-align: right;
+        }
+
+        .receipt-pill {
+            display: inline-block;
+            background: #e6f7ef;
+            color: #128a5b;
+            font-size: 0.74rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            padding: 3px 10px;
+            border-radius: 20px;
+            margin-bottom: 4px;
+        }
+
+        .receipt-id {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #1d6fd8;
+            margin: 0 0 2px;
+        }
+
+        .receipt-date {
+            font-size: 0.8rem;
+            color: #62748c;
+            margin: 0;
+        }
+
+        .receipt-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .info-col h3 {
+            margin: 0 0 0.6rem;
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #62748c;
+        }
+
+        .info-row {
+            display: flex;
+            margin-bottom: 0.35rem;
+            font-size: 0.85rem;
+        }
+
+        .info-label {
+            width: 105px;
+            color: #62748c;
+            flex-shrink: 0;
+        }
+
+        .info-val {
+            font-weight: 600;
+            color: #18263a;
+        }
+
+        .receipt-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.25rem;
+        }
+
+        .receipt-table th {
+            background: #0d2440;
+            color: #ffffff;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 8px 12px;
+            text-align: left;
+        }
+
+        .receipt-table th:first-child {
+            border-radius: 7px 0 0 0;
+        }
+
+        .receipt-table th:last-child {
+            border-radius: 0 7px 0 0;
+            text-align: right;
+        }
+
+        .receipt-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 0.86rem;
+        }
+
+        .receipt-table td:last-child {
+            text-align: right;
+            font-weight: 700;
+            color: #18263a;
+        }
+
+        .amount-in-words {
+            background: #f1f6fc;
+            border-left: 3.5px solid #1d6fd8;
+            padding: 8px 12px;
+            border-radius: 0 7px 7px 0;
+            font-size: 0.82rem;
+            color: #18263a;
+            margin-bottom: 1.5rem;
+        }
+
+        .amount-in-words b {
+            color: #0d2440;
+        }
+
+        .fee-summary-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #ffffff;
+            border: 1.5px dashed #cbd5e1;
+            border-radius: 11px;
+            padding: 0.9rem 1.25rem;
+            margin-bottom: 1.8rem;
+        }
+
+        .sum-item {
+            text-align: center;
+        }
+
+        .sum-item small {
+            display: block;
+            color: #62748c;
+            font-size: 0.74rem;
+            margin-bottom: 3px;
+        }
+
+        .sum-item b {
+            font-size: 1.05rem;
+            color: #18263a;
+        }
+
+        .sum-item.paid b {
+            color: #128a5b;
+        }
+
+        .sum-item.pending b {
+            color: #c62f2f;
+        }
+
+        .receipt-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #edf2f7;
+        }
+
+        .footer-note {
+            font-size: 0.78rem;
+            color: #94a3b8;
+            max-width: 400px;
+            line-height: 1.4;
+        }
+
+        .signature-box {
+            text-align: center;
+            width: 200px;
+        }
+
+        .signature-seal {
+            width: 54px;
+            height: 54px;
+            margin: 0 auto 6px;
+            border-radius: 50%;
+            border: 2px solid #128a5b;
+            color: #128a5b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            line-height: 1.1;
+            transform: rotate(-10deg);
+        }
+
+        .signature-line {
+            border-top: 1px solid #62748c;
+            margin-top: 4px;
+            padding-top: 4px;
+            font-size: 0.8rem;
+            color: #62748c;
+            font-weight: 600;
+        }
+
+        .status-txt-muted {
+            color: #62748c;
+        }
+
+        .status-txt-paid {
+            color: #128a5b;
+        }
+
+        .status-txt-partial {
+            color: #1d6fd8;
+        }
+
+        .status-txt-pending {
+            color: #c62f2f;
+        }
+
+        /* Print styles */
+        @media print {
+            body.receipt-page {
+                background: #ffffff !important;
+                padding: 0 !important;
+            }
+
+            .receipt-toolbar {
+                display: none !important;
+            }
+
+            .receipt-card {
+                box-shadow: none !important;
+                border: none !important;
+                max-width: 100% !important;
+                padding: 1.5cm !important;
+            }
+
+            @page {
+                size: A4 portrait;
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+
+<body class="receipt-page">
+    <div class="receipt-toolbar">
+        <a href="{% url 'fees' %}" class="btn sm secondary">
+            <span>↩</span> Back to Fees
+        </a>
+        <div style="display: flex; gap: 8px;">
+            <button onclick="window.print()" class="btn sm"
+                style="background:#1d6fd8; color:#fff; border:0; padding:8px 16px; border-radius:8px;">
+                <span>🖨️</span> Print / Save as PDF
+            </button>
+            <a href="?download=1" class="btn sm"
+                style="background:#0d2440; color:#fff; border:0; padding:8px 16px; border-radius:8px;">
+                <span>⬇️</span> Download HTML
+            </a>
+        </div>
+    </div>
+
+    <div class="receipt-card" id="receipt-paper">
+        <div class="receipt-header">
+            <div>
+                <h1 class="brand-title">Hostel Sphere</h1>
+                <p class="brand-subtitle">Student Residence & Accommodation Management</p>
+                <p class="brand-subtitle" style="margin-top:2px;">{% if is_statement %}Official Student Fee Statement &
+                    Ledger{% else %}Official Fee Payment Receipt{% endif %}</p>
+            </div>
+            <div class="receipt-badge-box">
+                <span class="receipt-pill">{% if is_statement %}Fee Statement{% else %}Payment Receipt{% endif %}</span>
+                <p class="receipt-id">{{ rec_no }}</p>
+                <p class="receipt-date">Date: {{ receipt_date|date:"d M Y" }}</p>
+            </div>
+        </div>
+
+        <div class="receipt-grid">
+            <div class="info-col">
+                <h3>Student Details</h3>
+                <div class="info-row">
+                    <span class="info-label">Student Name:</span>
+                    <span class="info-val">{{ student.name }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Register No:</span>
+                    <span class="info-val">{{ student.reg_no }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Course & Year:</span>
+                    <span class="info-val">{{ student.course }} (Year {{ student.year }})</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Contact Phone:</span>
+                    <span class="info-val">{{ student.phone }}</span>
+                </div>
+            </div>
+
+            <div class="info-col">
+                <h3>Hostel & Room Details</h3>
+                <div class="info-row">
+                    <span class="info-label">Room Number:</span>
+                    <span class="info-val">{% if room %}Room {{ room.number }}{% else %}Not Allocated{% endif %}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Floor:</span>
+                    <span class="info-val">{% if room %}{{ room.get_floor_display }}{% else %}-{% endif %}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Sharing Type:</span>
+                    <span class="info-val">{% if room %}{{ room.capacity }} Sharing{% else %}-{% endif %}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Guardian:</span>
+                    <span class="info-val">{{ student.guardian_name }}</span>
+                </div>
+            </div>
+        </div>
+
+        <table class="receipt-table">
+            <thead>
+                <tr>
+                    <th style="width: 50px;">S.No</th>
+                    <th>Fee Description</th>
+                    <th>Payment Date</th>
+                    <th>Amount Paid</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if line_items %}
+                {% for item in line_items %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>
+                        <b>{{ item.title }}</b>
+                        <div style="font-size:0.8rem; color:#62748c; margin-top:2px;">
+                            {{ item.subtitle }}
+                        </div>
+                    </td>
+                    <td>{{ item.date }}</td>
+                    <td>{{ item.amount }}</td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr>
+                    <td>1</td>
+                    <td>
+                        <b>Hostel Accommodation & Facilities Fee (Instalment)</b>
+                        <div style="font-size:0.8rem; color:#62748c; margin-top:2px;">
+                            Payment Transaction Reference: {{ rec_no }}
+                        </div>
+                    </td>
+                    <td>{{ payment.date|date:"d M Y" }}</td>
+                    <td>{{ amount_formatted }}</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+
+        <div class="amount-in-words">
+            <b>Amount in Words:</b> {{ amount_in_words }}
+        </div>
+
+        <div class="fee-summary-card">
+            <div class="sum-item">
+                <small>Total Prescribed Fee</small>
+                <b>{{ total_fee_formatted }}</b>
+            </div>
+            <div class="sum-item paid">
+                <small>Total Paid to Date</small>
+                <b>{{ total_paid_formatted }}</b>
+            </div>
+            <div class="sum-item pending">
+                <small>Remaining Balance</small>
+                <b>{{ balance_formatted }}</b>
+            </div>
+            <div class="sum-item">
+                <small>Payment Status</small>
+                <b
+                    class="{% if total_fee == 0 %}status-txt-muted{% elif balance == 0 %}status-txt-paid{% elif total_paid > 0 %}status-txt-partial{% else %}status-txt-pending{% endif %}">
+                    {% if total_fee == 0 %}Room Not Allocated Yet{% elif balance == 0 %}Fully Paid{% elif total_paid > 0
+                    %}Partial Payment{% else %}Pending{% endif %}
+                </b>
+            </div>
+        </div>
+
+        <div class="receipt-footer">
+            <div class="footer-note">
+                <p style="margin:0 0 4px;">• This is an official system-generated payment receipt.</p>
+                <p style="margin:0;">• For inquiries regarding hostel billing, contact accounts or hostel warden.</p>
+            </div>
+            <div class="signature-box">
+                <div class="signature-seal">
+                    PAID<br>VERIFIED
+                </div>
+                <div class="signature-line">
+                    Authorized Signatory<br>
+                    <small style="font-weight:400; color:#94a3b8;">Hostel Sphere Administration</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // If url has print=1, automatically trigger print
+        if (window.location.search.includes('print=1')) {
+            window.addEventListener('load', function () {
+                setTimeout(function () {
+                    window.print();
+                }, 300);
+            });
+        }
+    </script>
+</body>
+
+</html>

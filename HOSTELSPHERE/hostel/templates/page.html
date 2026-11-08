@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <h1>{{ title }}</h1>
+    </div>
+
+    {% if intro %}
+    <div class="page-intro">{{ intro }}</div>
+    {% endif %}
+
+    {% if stats %}
+    <div class="stats">
+        {% for n, l in stats %}
+        <div class="stat">
+            <b>{{ n }}</b>
+            <span>{{ l }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if form %}
+    <form method="post" enctype="multipart/form-data" class="card">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button class="btn">{{ submit }}</button>
+    </form>
+    {% endif %}
+
+    {% if cols %}
+    <div class="card scroll">
+        <table>
+            <thead>
+                <tr>
+                    {% for c in cols %}
+                    <th>{{ c }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr>
+                    {% for c in row %}
+                    <td>{{ c }}</td>
+                    {% endfor %}
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="{{ cols|length }}" style="text-align: center; padding: 2.5rem; color: var(--mute);">
+                        No records found.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    {% if note %}
+    <p class="hint">{{ note }}</p>
+    {% endif %}
+</div>
+{% endblock %}

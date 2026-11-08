@@ -1,0 +1,5 @@
+Django>=4.2,<5.3
+PyMySQL>=1.1
+cryptography
+Pillow
+qrcode[pil]

@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="student-id-container">
+    <!-- Resident ID Card Print Area -->
+    <div class="id-card-print-area">
+        <div class="resident-id-card" id="residentIdCard">
+            <!-- Card Header -->
+            <div class="id-card-header">
+                <span class="id-card-icon">🏠</span>
+                <span class="id-card-title">Hostel Sphere · Resident ID</span>
+            </div>
+
+            <!-- Card Body / Middle -->
+            <div class="id-card-body">
+                <div class="id-avatar">{{ initials }}</div>
+                <div class="id-info">
+                    <h2 class="id-name">{{ s.name }}</h2>
+                    <div class="id-sub">{{ s.reg_no }} · {{ s.course }} year {{ s.year }}</div>
+                    <div class="id-room">{{ room_info }}</div>
+                </div>
+            </div>
+
+            <!-- Card Footer / Bottom -->
+            <div class="id-card-footer">
+                <div class="id-qr-box">
+                    <img src="{{ qr_src }}" alt="Resident QR Code" class="id-qr-img" id="qrImgElement">
+                </div>
+                <div class="id-valid-col">
+                    <div class="id-valid-label">Valid till</div>
+                    <div class="id-valid-date">{{ valid_till }}</div>
+                    <div class="id-gate-note">Show at the gate</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="id-card-actions">
+        <button type="button" class="id-btn id-btn-download" onclick="downloadIDCard()">Download</button>
+        <button type="button" class="id-btn id-btn-print" onclick="window.print()">Print</button>
+    </div>
+</div>
+
+<script>
+function downloadIDCard() {
+    const scale = 2;
+    const w = 450 * scale;
+    const h = 280 * scale;
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+
+    // Rounded rectangle helper
+    function roundRect(ctx, x, y, width, height, radius) {
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.lineTo(x + width - radius, y);
+        ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+        ctx.lineTo(x + width, y + height - radius);
+        ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+        ctx.lineTo(x + radius, y + height);
+        ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+        ctx.lineTo(x, y + radius);
+        ctx.quadraticCurveTo(x, y, x + radius, y);
+        ctx.closePath();
+    }
+
+    // Card background gradient
+    const grad = ctx.createLinearGradient(0, 0, w, h);
+    grad.addColorStop(0, '#1d4ed8');
+    grad.addColorStop(0.55, '#0284c7');
+    grad.addColorStop(1, '#06b6d4');
+
+    roundRect(ctx, 0, 0, w, h, 24 * scale);
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Top Header: 🏠 Hostel Sphere · Resident ID
+    ctx.font = `600 ${14 * scale}px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+    ctx.fillText('🏠  Hostel Sphere · Resident ID', 28 * scale, 36 * scale);
+
+    // Avatar Circle
+    const avatarX = 60 * scale;
+    const avatarY = 95 * scale;
+    const avatarR = 30 * scale;
+    ctx.beginPath();
+    ctx.arc(avatarX, avatarY, avatarR, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+    ctx.fill();
+
+    // Avatar Initials
+    ctx.font = `700 ${20 * scale}px system-ui, -apple-system, sans-serif`;
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('{{ initials|escapejs }}', avatarX, avatarY);
+
+    // Student Info
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    const textLeft = 104 * scale;
+
+    // Student Name
+    ctx.font = `700 ${22 * scale}px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('{{ s.name|escapejs }}', textLeft, 84 * scale);
+
+    // Subtitle 1 (Reg no & course)
+    ctx.font = `500 ${14 * scale}px system-ui, -apple-system, sans-serif`;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.88)';
+    ctx.fillText('{{ s.reg_no|escapejs }} · {{ s.course|escapejs }} year {{ s.year }}', textLeft, 106 * scale);
+
+    // Subtitle 2 (Room)
+    ctx.fillText('{{ room_info|escapejs }}', textLeft, 126 * scale);
+
+    // QR Code Background Box
+    const qrBoxX = 28 * scale;
+    const qrBoxY = 155 * scale;
+    const qrBoxSize = 96 * scale;
+    roundRect(ctx, qrBoxX, qrBoxY, qrBoxSize, qrBoxSize, 12 * scale);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+
+    // QR Code Image
+    const qrImg = document.getElementById('qrImgElement');
+    if (qrImg && qrImg.complete) {
+        const pad = 6 * scale;
+        ctx.drawImage(qrImg, qrBoxX + pad, qrBoxY + pad, qrBoxSize - (pad * 2), qrBoxSize - (pad * 2));
+        finishDownload();
+    } else if (qrImg) {
+        qrImg.onload = function() {
+            const pad = 6 * scale;
+            ctx.drawImage(qrImg, qrBoxX + pad, qrBoxY + pad, qrBoxSize - (pad * 2), qrBoxSize - (pad * 2));
+            finishDownload();
+        };
+    } else {
+        finishDownload();
+    }
+
+    function finishDownload() {
+        // Valid till label
+        const valLeft = 142 * scale;
+        ctx.font = `500 ${13 * scale}px system-ui, -apple-system, sans-serif`;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+        ctx.fillText('Valid till', valLeft, 185 * scale);
+
+        // Valid till date
+        ctx.font = `700 ${18 * scale}px system-ui, -apple-system, sans-serif`;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText('{{ valid_till|escapejs }}', valLeft, 210 * scale);
+
+        // Show at gate note
+        ctx.font = `500 ${13 * scale}px system-ui, -apple-system, sans-serif`;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+        ctx.fillText('Show at the gate', valLeft, 235 * scale);
+
+        // Trigger download
+        const link = document.createElement('a');
+        link.download = 'HostelSphere_ID_{{ s.reg_no|escapejs }}.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    }
+}
+</script>
+{% endblock %}

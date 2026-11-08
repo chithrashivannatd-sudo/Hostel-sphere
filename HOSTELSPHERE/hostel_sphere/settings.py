@@ -8,7 +8,7 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:8000",
     "http://localhost:8000",
     "https://*.trycloudflare.com",
-    "https://*.ngrok-free.app",
+    "https://*.pythonanywhere.com",
     "https://*.ngrok.app",
 ]
 INSTALLED_APPS = ["django.contrib.admin", "django.contrib.auth", "django.contrib.contenttypes", "django.contrib.sessions",
@@ -37,6 +37,7 @@ TIME_ZONE = "Asia/Kolkata"
 USE_TZ = True
 LANGUAGE_CODE = "en-in"
 STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 LOGIN_URL = "/login/"

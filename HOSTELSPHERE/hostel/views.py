@@ -105,7 +105,7 @@ def login_view(r):
                 if p and p.user:
                     user_obj = p.user
 
-        auth_username = user_obj.username if user_obj else (name.upper() if role == "student" else name)
+        auth_username = user_obj.username if user_obj else name
         u = authenticate(r, username=auth_username, password=pw)
         if not u and user_obj and user_obj.check_password(pw):
             u = user_obj
@@ -220,14 +220,15 @@ def check_password_rules(pw):
 
 class RegForm(forms.ModelForm):
     password = forms.CharField(
-        widget=forms.PasswordInput(attrs={"placeholder": "At least 6 characters", "minlength": "6"}),
-        min_length=6,
+        widget=forms.PasswordInput(attrs={"placeholder": "Enter password"}),
         label="Create password",
-        help_text="Must be at least 6 characters."
+        help_text="Use any password you like.",
+        strip=False
     )
     confirm = forms.CharField(
         widget=forms.PasswordInput(attrs={"placeholder": "Re-enter password"}),
-        label="Confirm password"
+        label="Confirm password",
+        strip=False
     )
 
     class Meta:
@@ -236,19 +237,19 @@ class RegForm(forms.ModelForm):
         widgets = {
             "name": forms.TextInput(attrs={
                 "placeholder": "e.g. Rahul Sharma",
-                "pattern": r"^[A-Za-z\s]+$",
-                "title": "Letters and spaces only"
+                "pattern": r"^[A-Z].*",
+                "title": "First letter must be a capital letter"
             }),
             "reg_no": forms.TextInput(attrs={
                 "maxlength": "15",
-                "pattern": r"\d{1,15}",
-                "inputmode": "numeric",
-                "title": "1 to 15 digits"
+                "pattern": r"[A-Za-z0-9]{1,15}",
+                "title": "Letters and numbers, 1 to 15 characters",
+                "placeholder": "e.g. REG12345"
             }),
             "guardian_name": forms.TextInput(attrs={
                 "placeholder": "e.g. Suresh Kumar",
-                "pattern": r"^[A-Za-z\s]+$",
-                "title": "Letters and spaces only"
+                "pattern": r"^[A-Z].*",
+                "title": "First letter must be a capital letter"
             }),
             "dob": forms.DateInput(attrs={"type": "date"}),
             "phone": forms.TextInput(attrs={
@@ -268,9 +269,9 @@ class RegForm(forms.ModelForm):
             "address": forms.Textarea(attrs={"rows": 2})
         }
         help_texts = {
-            "name": "Letters and spaces only.",
-            "reg_no": "1 to 15 digits.",
-            "guardian_name": "Letters and spaces only.",
+            "name": "First letter must be a capital letter.",
+            "reg_no": "Letters and numbers, 1 to 15 characters.",
+            "guardian_name": "First letter must be a capital letter.",
             "phone": "Must be exactly 10 digits.",
             "guardian_phone": "Must be exactly 10 digits."
         }
@@ -279,14 +280,14 @@ class RegForm(forms.ModelForm):
         v = self.cleaned_data.get("name", "").strip()
         if not v:
             raise forms.ValidationError("Full name is required.")
-        if not re.match(r"^[A-Za-z\s]+$", v):
-            raise forms.ValidationError("Full name must contain letters and spaces only.")
+        if not v[0].isupper():
+            raise forms.ValidationError("Full name's first letter must be a capital letter.")
         return v
 
     def clean_guardian_name(self):
         v = self.cleaned_data.get("guardian_name", "").strip()
-        if v and not re.match(r"^[A-Za-z\s]+$", v):
-            raise forms.ValidationError("Guardian name must contain letters and spaces only.")
+        if v and not v[0].isupper():
+            raise forms.ValidationError("Guardian name's first letter must be a capital letter.")
         return v
 
     def clean_phone(self):
@@ -305,30 +306,28 @@ class RegForm(forms.ModelForm):
         v = self.cleaned_data.get("reg_no", "").strip()
         if not v:
             raise forms.ValidationError("Register number is required.")
-        if not v.isdigit():
-            raise forms.ValidationError("Register number must contain digits only.")
-        if len(v) < 1 or len(v) > 15:
-            raise forms.ValidationError("Register number must be between 1 and 15 digits.")
-        if Student.objects.filter(reg_no=v).exists() or User.objects.filter(username=v).exists():
+        if not re.match(r"^[A-Za-z0-9]{1,15}$", v):
+            raise forms.ValidationError("Letters and numbers, 1 to 15 characters.")
+        if Student.objects.filter(reg_no__iexact=v).exists() or User.objects.filter(username__iexact=v).exists():
             raise forms.ValidationError("Register number already exists")
         return v
 
     def clean(self):
         d = super().clean()
         pw = d.get("password")
-        if pw:
-            for err in check_password_rules(pw):
-                self.add_error("password", err)
-        if d.get("password") and d.get("confirm") and d.get("password") != d.get("confirm"):
+        confirm = d.get("confirm")
+        if not pw:
+            self.add_error("password", "Password is required.")
+        if pw and confirm and pw != confirm:
             self.add_error("confirm", "Passwords do not match.")
         return d
 
 
 def check_reg_no(r):
     reg = r.GET.get("reg", "").strip()
-    if not reg or not reg.isdigit() or len(reg) > 15:
+    if not reg or not re.match(r"^[A-Za-z0-9]{1,15}$", reg):
         return JsonResponse({"exists": False, "valid": False})
-    exists = Student.objects.filter(reg_no=reg).exists() or User.objects.filter(username=reg).exists()
+    exists = Student.objects.filter(reg_no__iexact=reg).exists() or User.objects.filter(username__iexact=reg).exists()
     return JsonResponse({"exists": exists, "valid": True, "reg": reg})
 
 
@@ -346,7 +345,8 @@ def register(r):
             return redirect(f"{reverse('login')}?role=student")
         else:
             if "reg_no" in form.errors:
-                messages.error(r, "Register number already exists")
+                for err in form.errors["reg_no"]:
+                    messages.error(r, err)
     return render(r, "register.html", {"form": form})
 
 

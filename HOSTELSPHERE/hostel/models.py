@@ -17,7 +17,7 @@ class Room(models.Model):
 
 
 class Student(models.Model):
-    reg_no = models.CharField("Register number", max_length=20, unique=True)
+    reg_no = models.CharField("Register number", max_length=15, unique=True)
     name = models.CharField("Full name", max_length=100)
     gender = models.CharField(max_length=6, choices=GENDER)
     dob = models.DateField("Date of birth")

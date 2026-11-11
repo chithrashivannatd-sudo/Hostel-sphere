@@ -72,7 +72,7 @@
         };
     });
 
-    // Real-time register number check (digits only, 1-15 digits)
+    // Real-time register number check (letters and numbers, 1 to 15 characters)
     (function() {
         var regInput = document.querySelector('input[name="reg_no"]');
         if (!regInput) return;
@@ -93,16 +93,16 @@
                 regInput.setCustomValidity('');
                 return;
             }
-            if (!/^\d+$/.test(val)) {
+            if (!/^[A-Za-z0-9]+$/.test(val)) {
                 liveSpan.style.color = 'var(--bad, #dc2626)';
-                liveSpan.textContent = '⚠️ Register number must contain digits only.';
-                regInput.setCustomValidity('Digits only');
+                liveSpan.textContent = '⚠️ Register number must contain letters and numbers only.';
+                regInput.setCustomValidity('Letters and numbers only');
                 return;
             }
             if (val.length < 1 || val.length > 15) {
                 liveSpan.style.color = 'var(--bad, #dc2626)';
-                liveSpan.textContent = '⚠️ Register number must be between 1 and 15 digits.';
-                regInput.setCustomValidity('Must be between 1 and 15 digits');
+                liveSpan.textContent = '⚠️ Letters and numbers, 1 to 15 characters.';
+                regInput.setCustomValidity('Letters and numbers, 1 to 15 characters.');
                 return;
             }
 

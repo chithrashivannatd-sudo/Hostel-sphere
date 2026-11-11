@@ -4,8 +4,15 @@
 <div class="card">
     <h1>New student registration</h1>
     <p class="hint">The warden allocates your room after you register.</p>
-    <form method="post">
+    <form method="post" id="reg-form">
         {% csrf_token %}
+        {% if form.non_field_errors %}
+        <div class="msg r" style="margin-bottom: 1.2rem; color: #b91c1c; background: #fee2e2; border: 1px solid #f87171; padding: 0.75rem 1rem; border-radius: 8px;">
+            {% for err in form.non_field_errors %}
+            <div>⚠️ {{ err }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
         {% for field in form %}
         {% if field.name == 'password' or field.name == 'confirm' %}
         <p>
@@ -16,13 +23,14 @@
                     style="background: none; border: 0; color: #1d6fd8; cursor: pointer; font-weight: 600; white-space: nowrap; padding: 0.3rem 0.5rem; font-size: 0.9rem; flex-shrink: 0;">Show</button>
             </span>
             {% if field.help_text %}
-            <span class="helptext"
-                style="display: block; color: var(--mute); font-size: 0.83rem; margin-top: 0.35rem;">{{ field.help_text
-                }}</span>
+            <span class="helptext" style="display: block; color: var(--mute); font-size: 0.83rem; margin-top: 0.35rem;">{{ field.help_text }}</span>
             {% endif %}
             {% if field.errors %}
-            <span class="errorlist" style="color: var(--bad); font-size: 0.85rem; display: block;">{{ field.errors
-                }}</span>
+            <span class="errorlist" style="color: var(--bad, #dc2626); font-size: 0.85rem; display: block; margin-top: 0.3rem; font-weight: 600;">
+                {% for err in field.errors %}
+                <span style="display: block;">⚠️ {{ err }}</span>
+                {% endfor %}
+            </span>
             {% endif %}
         </p>
         {% else %}
@@ -30,25 +38,27 @@
             <label for="{{ field.id_for_label }}">{{ field.label }}:</label>
             {{ field }}
             {% if field.help_text %}
-            <span class="helptext"
-                style="display: block; color: var(--mute); font-size: 0.83rem; margin-top: 0.35rem;">{{ field.help_text
-                }}</span>
+            <span class="helptext" style="display: block; color: var(--mute); font-size: 0.83rem; margin-top: 0.35rem;">{{ field.help_text }}</span>
             {% endif %}
             {% if field.errors %}
-            <span class="errorlist" style="color: var(--bad); font-size: 0.85rem; display: block;">{{ field.errors
-                }}</span>
+            <span class="errorlist" style="color: var(--bad, #dc2626); font-size: 0.85rem; display: block; margin-top: 0.3rem; font-weight: 600;">
+                {% for err in field.errors %}
+                <span style="display: block;">⚠️ {{ err }}</span>
+                {% endfor %}
+            </span>
             {% endif %}
         </p>
         {% endif %}
         {% endfor %}
         <p style="margin-top: 1.2rem;">
-            <button class="btn">Register</button>
-            <a href="{% url 'login' %}" style="margin-left: 0.8rem;">I already have an account</a>
+            <button class="btn" id="reg-submit-btn">Register</button>
+            <a href="{% url 'login' %}?role=student" style="margin-left: 0.8rem;">I already have an account</a>
         </p>
     </form>
 </div>
 
 <script>
+    // Password toggle
     document.querySelectorAll('.toggle-pw').forEach(function (btn) {
         btn.onclick = function (e) {
             e.preventDefault();
@@ -61,5 +71,65 @@
             }
         };
     });
+
+    // Real-time register number check (1-15 digits/numbers/characters)
+    (function() {
+        var regInput = document.querySelector('input[name="reg_no"]');
+        if (!regInput) return;
+
+        var liveSpan = document.createElement('span');
+        liveSpan.id = 'reg-live-feedback';
+        liveSpan.style.display = 'block';
+        liveSpan.style.fontSize = '0.85rem';
+        liveSpan.style.marginTop = '0.3rem';
+        liveSpan.style.fontWeight = '600';
+        regInput.parentNode.insertBefore(liveSpan, regInput.nextElementSibling);
+
+        var debounceTimer = null;
+        function checkRegNo() {
+            var val = regInput.value.trim().toUpperCase();
+            if (!val) {
+                liveSpan.textContent = '';
+                regInput.setCustomValidity('');
+                return;
+            }
+            if (val.length < 1 || val.length > 15) {
+                liveSpan.style.color = 'var(--bad, #dc2626)';
+                liveSpan.textContent = '⚠️ Register number must be between 1 and 15 numbers or characters.';
+                regInput.setCustomValidity('Must be between 1 and 15 numbers');
+                return;
+            }
+            if (!/^[A-Za-z0-9]+$/.test(val)) {
+                liveSpan.style.color = 'var(--bad, #dc2626)';
+                liveSpan.textContent = '⚠️ Register number must contain only numbers and letters (1 to 15 characters).';
+                regInput.setCustomValidity('Only numbers and letters allowed');
+                return;
+            }
+
+            fetch('{% url "check_reg_no" %}?reg=' + encodeURIComponent(val))
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    if (data.exists) {
+                        liveSpan.style.color = 'var(--bad, #dc2626)';
+                        liveSpan.textContent = '⚠️ Already register number exists.';
+                        regInput.setCustomValidity('Already register number exists');
+                    } else {
+                        liveSpan.style.color = 'var(--good, #16a34a)';
+                        liveSpan.textContent = '✓ Register number is available.';
+                        regInput.setCustomValidity('');
+                    }
+                })
+                .catch(function() {
+                    liveSpan.textContent = '';
+                    regInput.setCustomValidity('');
+                });
+        }
+
+        regInput.addEventListener('input', function() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(checkRegNo, 350);
+        });
+        regInput.addEventListener('blur', checkRegNo);
+    })();
 </script>
 {% endblock %}

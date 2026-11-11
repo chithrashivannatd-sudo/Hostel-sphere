@@ -10,7 +10,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.db.models import Count
 from django.middleware.csrf import get_token
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.urls import reverse
@@ -91,14 +91,38 @@ def page(r, title, cols=(), rows=(), form=None, stats=(), intro="", note="", sub
 def login_view(r):
     role = r.GET.get("role") or r.POST.get("role")
     if r.method == "POST":
-        name = r.POST["username"].strip()
-        u = authenticate(r, username=name.upper() if role == "student" else name, password=r.POST["password"])
-        if u and u.is_active and prof_of(u) == role:
-            login(r, u)
-            return redirect("dash")
-        if u:
-            Audit.objects.create(who=u.username, kind="Failed login", action=f"Chose the wrong role ({role})", ip=r.META.get("REMOTE_ADDR", ""))
-        messages.error(r, "Wrong username, password or role. Students log in with their register number.")
+        name = r.POST.get("username", "").strip()
+        pw = r.POST.get("password", "")
+
+        # Look up candidate user flexibly (supports 6-digit, 8-digit, 1-15 character register numbers)
+        user_obj = User.objects.filter(username__iexact=name).first()
+        if not user_obj and (role == "student" or not role):
+            # Also check Student model by reg_no (in case case-insensitive or separated)
+            st = Student.objects.filter(reg_no__iexact=name).first()
+            if st:
+                p = Profile.objects.filter(student=st).first()
+                if p and p.user:
+                    user_obj = p.user
+
+        auth_username = user_obj.username if user_obj else (name.upper() if role == "student" else name)
+        u = authenticate(r, username=auth_username, password=pw)
+        if not u and user_obj and user_obj.check_password(pw):
+            u = user_obj
+
+        if u and u.is_active:
+            user_role = prof_of(u)
+            if not role:
+                role = user_role
+            if user_role == role:
+                login(r, u)
+                return redirect("dash")
+            else:
+                Audit.objects.create(who=u.username, kind="Failed login", action=f"Chose the wrong role ({role} vs {user_role})", ip=r.META.get("REMOTE_ADDR", ""))
+                messages.error(r, f"This account is registered as a {user_role}. Please sign in through the {user_role.title()} portal.")
+                return render(r, "login.html", {"role": role, "demo": DEMO.get(role), "roles": ["student", "admin", "warden", "maintenance"]})
+
+        Audit.objects.create(who=name, kind="Failed login", action="Invalid credentials", ip=r.META.get("REMOTE_ADDR", ""))
+        messages.error(r, "Wrong register number, username or password. Please try again.")
     return render(r, "login.html", {"role": role, "demo": DEMO.get(role), "roles": ["student", "admin", "warden", "maintenance"]})
 
 
@@ -128,6 +152,12 @@ def forgot_password(r):
 
         lookup_name = username.upper() if role == "student" else username
         user = User.objects.filter(username__iexact=lookup_name).first()
+        if not user and role == "student":
+            st = Student.objects.filter(reg_no__iexact=username).first()
+            if st:
+                p_match = Profile.objects.filter(student=st).first()
+                if p_match and p_match.user:
+                    user = p_match.user
         if not user:
             lbl = "register number" if role == "student" else "username"
             messages.error(r, f"No account found with {lbl} '{username}'.")
@@ -208,6 +238,11 @@ class RegForm(forms.ModelForm):
         fields = ["name", "reg_no", "gender", "dob", "phone", "email", "course", "year", "guardian_name", "guardian_phone", "address"]
         widgets = {
             "name": forms.TextInput(attrs={"placeholder": "e.g. Rahul Sharma"}),
+            "reg_no": forms.TextInput(attrs={
+                "maxlength": "15",
+                "pattern": r"[a-zA-Z0-9]{1,15}",
+                "title": "1 to 15 numbers or characters"
+            }),
             "guardian_name": forms.TextInput(attrs={"placeholder": "e.g. Suresh Kumar"}),
             "dob": forms.DateInput(attrs={"type": "date"}),
             "phone": forms.TextInput(attrs={"maxlength": "10", "pattern": r"\d{10}", "title": "Enter exactly 10 digits", "placeholder": "10-digit number", "inputmode": "numeric"}),
@@ -248,9 +283,15 @@ class RegForm(forms.ModelForm):
         return v
 
     def clean_reg_no(self):
-        v = self.cleaned_data["reg_no"].strip().upper()
-        if User.objects.filter(username=v).exists():
-            raise forms.ValidationError("This register number is already registered.")
+        v = self.cleaned_data.get("reg_no", "").strip().upper()
+        if not v:
+            raise forms.ValidationError("Register number is required.")
+        if len(v) < 1 or len(v) > 15:
+            raise forms.ValidationError("Register number must be between 1 and 15 numbers or characters.")
+        if not v.isalnum():
+            raise forms.ValidationError("Register number must contain only numbers and letters (1 to 15 characters).")
+        if Student.objects.filter(reg_no__iexact=v).exists() or User.objects.filter(username__iexact=v).exists():
+            raise forms.ValidationError("Already register number exists.")
         return v
 
     def clean(self):
@@ -264,13 +305,29 @@ class RegForm(forms.ModelForm):
         return d
 
 
+def check_reg_no(r):
+    reg = r.GET.get("reg", "").strip().upper()
+    if not reg:
+        return JsonResponse({"exists": False})
+    exists = Student.objects.filter(reg_no__iexact=reg).exists() or User.objects.filter(username__iexact=reg).exists()
+    return JsonResponse({"exists": exists, "reg": reg})
+
+
 def register(r):
     form = RegForm(r.POST or None)
-    if r.method == "POST" and form.is_valid():
-        s = form.save()
-        Profile.objects.create(user=User.objects.create_user(s.reg_no, s.email, form.cleaned_data["password"]), role="student", student=s)
-        messages.success(r, "Registration complete. Log in with your register number. The warden will allocate your room.")
-        return redirect("login")
+    if r.method == "POST":
+        if form.is_valid():
+            s = form.save()
+            Profile.objects.create(
+                user=User.objects.create_user(s.reg_no, s.email, form.cleaned_data["password"]),
+                role="student",
+                student=s
+            )
+            messages.success(r, "Registration complete! You can now log in with your register number. The warden will allocate your room.")
+            return redirect(f"{reverse('login')}?role=student")
+        else:
+            if "reg_no" in form.errors:
+                messages.error(r, "Already register number exists. Please choose a different number or log in.")
     return render(r, "register.html", {"form": form})
 
 
@@ -1922,8 +1979,16 @@ def settings_add_student(r):
         messages.error(r, "Full name's first letter must be a capital letter.")
         return redirect(reverse("settings") + "?tab=student")
 
-    if User.objects.filter(username=reg).exists():
-        messages.error(r, f"A user with register number {reg} already exists.")
+    if len(reg) < 1 or len(reg) > 15:
+        messages.error(r, "Register number must be between 1 and 15 numbers or characters.")
+        return redirect(reverse("settings") + "?tab=student")
+
+    if not reg.isalnum():
+        messages.error(r, "Register number must contain only numbers and letters (1 to 15 characters).")
+        return redirect(reverse("settings") + "?tab=student")
+
+    if Student.objects.filter(reg_no__iexact=reg).exists() or User.objects.filter(username__iexact=reg).exists():
+        messages.error(r, "Already register number exists.")
         return redirect(reverse("settings") + "?tab=student")
 
     s = Student.objects.create(

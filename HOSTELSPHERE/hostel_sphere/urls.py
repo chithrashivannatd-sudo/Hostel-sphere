@@ -9,6 +9,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("", v.dash, name="dash"), path("login/", v.login_view, name="login"), path("logout/", v.logout_view, name="logout"),
     path("register/", v.register, name="register"),
+    path("check-reg-no/", v.check_reg_no, name="check_reg_no"),
     path("forgot-password/", v.forgot_password, name="forgot_password"),
     path("students/", v.students, name="students"), path("allocate/<int:sid>/", v.allocate, name="allocate"),
     path("student-id/", v.student_id, name="student_id"), path("student-id/<int:sid>/", v.student_id, name="student_id_detail"),

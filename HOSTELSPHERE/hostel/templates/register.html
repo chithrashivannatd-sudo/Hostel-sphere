@@ -72,7 +72,7 @@
         };
     });
 
-    // Real-time register number check (1-15 digits/numbers/characters)
+    // Real-time register number check (digits only, 1-15 digits)
     (function() {
         var regInput = document.querySelector('input[name="reg_no"]');
         if (!regInput) return;
@@ -87,22 +87,22 @@
 
         var debounceTimer = null;
         function checkRegNo() {
-            var val = regInput.value.trim().toUpperCase();
+            var val = regInput.value.trim();
             if (!val) {
                 liveSpan.textContent = '';
                 regInput.setCustomValidity('');
                 return;
             }
-            if (val.length < 1 || val.length > 15) {
+            if (!/^\d+$/.test(val)) {
                 liveSpan.style.color = 'var(--bad, #dc2626)';
-                liveSpan.textContent = '⚠️ Register number must be between 1 and 15 numbers or characters.';
-                regInput.setCustomValidity('Must be between 1 and 15 numbers');
+                liveSpan.textContent = '⚠️ Register number must contain digits only.';
+                regInput.setCustomValidity('Digits only');
                 return;
             }
-            if (!/^[A-Za-z0-9]+$/.test(val)) {
+            if (val.length < 1 || val.length > 15) {
                 liveSpan.style.color = 'var(--bad, #dc2626)';
-                liveSpan.textContent = '⚠️ Register number must contain only numbers and letters (1 to 15 characters).';
-                regInput.setCustomValidity('Only numbers and letters allowed');
+                liveSpan.textContent = '⚠️ Register number must be between 1 and 15 digits.';
+                regInput.setCustomValidity('Must be between 1 and 15 digits');
                 return;
             }
 
@@ -111,8 +111,8 @@
                 .then(function(data) {
                     if (data.exists) {
                         liveSpan.style.color = 'var(--bad, #dc2626)';
-                        liveSpan.textContent = '⚠️ Already register number exists.';
-                        regInput.setCustomValidity('Already register number exists');
+                        liveSpan.textContent = '⚠️ Register number already exists';
+                        regInput.setCustomValidity('Register number already exists');
                     } else {
                         liveSpan.style.color = 'var(--good, #16a34a)';
                         liveSpan.textContent = '✓ Register number is available.';

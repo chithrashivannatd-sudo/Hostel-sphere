@@ -1,6 +1,7 @@
 import base64
 import io
 import json
+import re
 from functools import wraps
 
 from django import forms
@@ -212,21 +213,17 @@ def check_password_rules(pw):
     errs = []
     if not pw:
         return ["Password is required."]
-    if not pw[0].isupper():
-        errs.append("Password's first letter must be a capital letter.")
-    if not any(c.isdigit() for c in pw):
-        errs.append("Password must contain at least one numerical digit (0-9).")
-    if not any(not c.isalnum() for c in pw):
-        errs.append("Password must contain at least one special character (e.g. !@#$%^&*).")
+    if len(pw) < 6:
+        errs.append("Password must be at least 6 characters long.")
     return errs
 
 
 class RegForm(forms.ModelForm):
     password = forms.CharField(
-        widget=forms.PasswordInput(attrs={"placeholder": "e.g. Pass@123"}),
+        widget=forms.PasswordInput(attrs={"placeholder": "At least 6 characters", "minlength": "6"}),
         min_length=6,
         label="Create password",
-        help_text="First letter must be capital, must include at least one number and one special character."
+        help_text="Must be at least 6 characters."
     )
     confirm = forms.CharField(
         widget=forms.PasswordInput(attrs={"placeholder": "Re-enter password"}),
@@ -237,21 +234,43 @@ class RegForm(forms.ModelForm):
         model = Student
         fields = ["name", "reg_no", "gender", "dob", "phone", "email", "course", "year", "guardian_name", "guardian_phone", "address"]
         widgets = {
-            "name": forms.TextInput(attrs={"placeholder": "e.g. Rahul Sharma"}),
+            "name": forms.TextInput(attrs={
+                "placeholder": "e.g. Rahul Sharma",
+                "pattern": r"^[A-Za-z\s]+$",
+                "title": "Letters and spaces only"
+            }),
             "reg_no": forms.TextInput(attrs={
                 "maxlength": "15",
-                "pattern": r"[a-zA-Z0-9]{1,15}",
-                "title": "1 to 15 numbers or characters"
+                "pattern": r"\d{1,15}",
+                "inputmode": "numeric",
+                "title": "1 to 15 digits"
             }),
-            "guardian_name": forms.TextInput(attrs={"placeholder": "e.g. Suresh Kumar"}),
+            "guardian_name": forms.TextInput(attrs={
+                "placeholder": "e.g. Suresh Kumar",
+                "pattern": r"^[A-Za-z\s]+$",
+                "title": "Letters and spaces only"
+            }),
             "dob": forms.DateInput(attrs={"type": "date"}),
-            "phone": forms.TextInput(attrs={"maxlength": "10", "pattern": r"\d{10}", "title": "Enter exactly 10 digits", "placeholder": "10-digit number", "inputmode": "numeric"}),
-            "guardian_phone": forms.TextInput(attrs={"maxlength": "10", "pattern": r"\d{10}", "title": "Enter exactly 10 digits", "placeholder": "10-digit number", "inputmode": "numeric"}),
+            "phone": forms.TextInput(attrs={
+                "maxlength": "10",
+                "pattern": r"\d{10}",
+                "title": "Enter exactly 10 digits",
+                "placeholder": "10-digit number",
+                "inputmode": "numeric"
+            }),
+            "guardian_phone": forms.TextInput(attrs={
+                "maxlength": "10",
+                "pattern": r"\d{10}",
+                "title": "Enter exactly 10 digits",
+                "placeholder": "10-digit number",
+                "inputmode": "numeric"
+            }),
             "address": forms.Textarea(attrs={"rows": 2})
         }
         help_texts = {
-            "name": "First letter must be a capital letter.",
-            "guardian_name": "First letter must be a capital letter.",
+            "name": "Letters and spaces only.",
+            "reg_no": "1 to 15 digits.",
+            "guardian_name": "Letters and spaces only.",
             "phone": "Must be exactly 10 digits.",
             "guardian_phone": "Must be exactly 10 digits."
         }
@@ -260,14 +279,14 @@ class RegForm(forms.ModelForm):
         v = self.cleaned_data.get("name", "").strip()
         if not v:
             raise forms.ValidationError("Full name is required.")
-        if not v[0].isupper():
-            raise forms.ValidationError("Full name's first letter must be a capital letter.")
+        if not re.match(r"^[A-Za-z\s]+$", v):
+            raise forms.ValidationError("Full name must contain letters and spaces only.")
         return v
 
     def clean_guardian_name(self):
         v = self.cleaned_data.get("guardian_name", "").strip()
-        if v and not v[0].isupper():
-            raise forms.ValidationError("Guardian name's first letter must be a capital letter.")
+        if v and not re.match(r"^[A-Za-z\s]+$", v):
+            raise forms.ValidationError("Guardian name must contain letters and spaces only.")
         return v
 
     def clean_phone(self):
@@ -283,15 +302,15 @@ class RegForm(forms.ModelForm):
         return v
 
     def clean_reg_no(self):
-        v = self.cleaned_data.get("reg_no", "").strip().upper()
+        v = self.cleaned_data.get("reg_no", "").strip()
         if not v:
             raise forms.ValidationError("Register number is required.")
+        if not v.isdigit():
+            raise forms.ValidationError("Register number must contain digits only.")
         if len(v) < 1 or len(v) > 15:
-            raise forms.ValidationError("Register number must be between 1 and 15 numbers or characters.")
-        if not v.isalnum():
-            raise forms.ValidationError("Register number must contain only numbers and letters (1 to 15 characters).")
-        if Student.objects.filter(reg_no__iexact=v).exists() or User.objects.filter(username__iexact=v).exists():
-            raise forms.ValidationError("Already register number exists.")
+            raise forms.ValidationError("Register number must be between 1 and 15 digits.")
+        if Student.objects.filter(reg_no=v).exists() or User.objects.filter(username=v).exists():
+            raise forms.ValidationError("Register number already exists")
         return v
 
     def clean(self):
@@ -306,11 +325,11 @@ class RegForm(forms.ModelForm):
 
 
 def check_reg_no(r):
-    reg = r.GET.get("reg", "").strip().upper()
-    if not reg:
-        return JsonResponse({"exists": False})
-    exists = Student.objects.filter(reg_no__iexact=reg).exists() or User.objects.filter(username__iexact=reg).exists()
-    return JsonResponse({"exists": exists, "reg": reg})
+    reg = r.GET.get("reg", "").strip()
+    if not reg or not reg.isdigit() or len(reg) > 15:
+        return JsonResponse({"exists": False, "valid": False})
+    exists = Student.objects.filter(reg_no=reg).exists() or User.objects.filter(username=reg).exists()
+    return JsonResponse({"exists": exists, "valid": True, "reg": reg})
 
 
 def register(r):
@@ -327,7 +346,7 @@ def register(r):
             return redirect(f"{reverse('login')}?role=student")
         else:
             if "reg_no" in form.errors:
-                messages.error(r, "Already register number exists. Please choose a different number or log in.")
+                messages.error(r, "Register number already exists")
     return render(r, "register.html", {"form": form})
 
 
@@ -1975,20 +1994,32 @@ def settings_add_student(r):
         messages.error(r, "Please fill in all required fields.")
         return redirect(reverse("settings") + "?tab=student")
 
-    if not name[0].isupper():
-        messages.error(r, "Full name's first letter must be a capital letter.")
+    if not re.match(r"^[A-Za-z\s]+$", name):
+        messages.error(r, "Full name must contain letters and spaces only.")
         return redirect(reverse("settings") + "?tab=student")
 
-    if len(reg) < 1 or len(reg) > 15:
-        messages.error(r, "Register number must be between 1 and 15 numbers or characters.")
+    if guardian and not re.match(r"^[A-Za-z\s]+$", guardian):
+        messages.error(r, "Guardian name must contain letters and spaces only.")
         return redirect(reverse("settings") + "?tab=student")
 
-    if not reg.isalnum():
-        messages.error(r, "Register number must contain only numbers and letters (1 to 15 characters).")
+    if not reg.isdigit() or len(reg) < 1 or len(reg) > 15:
+        messages.error(r, "Register number must contain digits only (1 to 15 digits).")
         return redirect(reverse("settings") + "?tab=student")
 
-    if Student.objects.filter(reg_no__iexact=reg).exists() or User.objects.filter(username__iexact=reg).exists():
-        messages.error(r, "Already register number exists.")
+    if Student.objects.filter(reg_no=reg).exists() or User.objects.filter(username=reg).exists():
+        messages.error(r, "Register number already exists")
+        return redirect(reverse("settings") + "?tab=student")
+
+    if len(password) < 6:
+        messages.error(r, "Password must be at least 6 characters long.")
+        return redirect(reverse("settings") + "?tab=student")
+
+    if not (phone.isdigit() and len(phone) == 10):
+        messages.error(r, "Phone number must contain exactly 10 digits.")
+        return redirect(reverse("settings") + "?tab=student")
+
+    if guardian_phone and not (guardian_phone.isdigit() and len(guardian_phone) == 10):
+        messages.error(r, "Guardian phone number must contain exactly 10 digits.")
         return redirect(reverse("settings") + "?tab=student")
 
     s = Student.objects.create(

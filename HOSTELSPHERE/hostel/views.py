@@ -213,16 +213,23 @@ def check_password_rules(pw):
     errs = []
     if not pw:
         return ["Password is required."]
-    if len(pw) < 6:
-        errs.append("Password must be at least 6 characters long.")
+    if not pw[0].isupper():
+        errs.append("Password's first letter must be a capital letter.")
+    if not any(c.isdigit() for c in pw):
+        errs.append("Password must contain at least one numerical digit (0-9).")
+    if not any(not c.isalnum() for c in pw):
+        errs.append("Password must contain at least one special character (e.g. !@#$%^&*).")
     return errs
 
 
 class RegForm(forms.ModelForm):
     password = forms.CharField(
-        widget=forms.PasswordInput(attrs={"placeholder": "Enter password"}),
+        widget=forms.PasswordInput(attrs={
+            "placeholder": "e.g. Pass@123",
+            "pattern": r"^[A-Z](?=.*\d)(?=.*[^A-Za-z0-9]).*",
+            "title": "First letter must be a capital letter, with at least one number and one special character."
+        }),
         label="Create password",
-        help_text="Use any password you like.",
         strip=False
     )
     confirm = forms.CharField(
@@ -268,12 +275,10 @@ class RegForm(forms.ModelForm):
             }),
             "address": forms.Textarea(attrs={"rows": 2})
         }
-        help_texts = {
-            "name": "First letter must be a capital letter.",
-            "reg_no": "Letters and numbers, 1 to 15 characters.",
-            "guardian_name": "First letter must be a capital letter.",
-            "phone": "Must be exactly 10 digits.",
-            "guardian_phone": "Must be exactly 10 digits."
+        error_messages = {
+            "reg_no": {
+                "unique": "Register number already exists",
+            }
         }
 
     def clean_name(self):
@@ -318,6 +323,9 @@ class RegForm(forms.ModelForm):
         confirm = d.get("confirm")
         if not pw:
             self.add_error("password", "Password is required.")
+        else:
+            for err in check_password_rules(pw):
+                self.add_error("password", err)
         if pw and confirm and pw != confirm:
             self.add_error("confirm", "Passwords do not match.")
         return d
@@ -335,14 +343,18 @@ def register(r):
     form = RegForm(r.POST or None)
     if r.method == "POST":
         if form.is_valid():
-            s = form.save()
-            Profile.objects.create(
-                user=User.objects.create_user(s.reg_no, s.email, form.cleaned_data["password"]),
-                role="student",
-                student=s
-            )
-            messages.success(r, "Registration complete! You can now log in with your register number. The warden will allocate your room.")
-            return redirect(f"{reverse('login')}?role=student")
+            try:
+                s = form.save()
+                Profile.objects.create(
+                    user=User.objects.create_user(s.reg_no, s.email, form.cleaned_data["password"]),
+                    role="student",
+                    student=s
+                )
+                messages.success(r, "Registration complete! You can now log in with your register number. The warden will allocate your room.")
+                return redirect(f"{reverse('login')}?role=student")
+            except Exception:
+                messages.error(r, "Register number already exists")
+                form.add_error("reg_no", "Register number already exists")
         else:
             if "reg_no" in form.errors:
                 for err in form.errors["reg_no"]:
@@ -676,22 +688,12 @@ def dash(r):
 @login_required
 def student_id(r, sid=None):
     p = prof(r)
-    s = None
-    if p.role == "student":
-        s = p.student
-        if not s:
-            messages.error(r, "No student profile linked to this account.")
-            return redirect("dash")
-    elif p.role in STAFF:
-        if sid:
-            s = get_object_or_404(Student.objects.select_related("room"), pk=sid)
-        else:
-            s = Student.objects.select_related("room").first()
-            if not s:
-                messages.error(r, "No student records found.")
-                return redirect("dash")
-    else:
+    if p.role != "student":
         messages.error(r, "You do not have access to view ID cards.")
+        return redirect("dash")
+    s = p.student
+    if not s:
+        messages.error(r, "No student profile linked to this account.")
         return redirect("dash")
 
     initials = "".join([part[0].upper() for part in s.name.split()[:2]]) if s.name else "ST"
@@ -730,9 +732,22 @@ def student_id(r, sid=None):
 def students(r):
     rooms = list(Room.objects.annotate(u=Count("student")))
     q = r.GET.get("q", "").strip()
-    qs = Student.objects.select_related("room").order_by("-id")
+    # Only correctly logged-in students (no duplicates, no unfinished registrations)
+    qs = Student.objects.filter(
+        profile__user__last_login__isnull=False,
+        profile__user__is_active=True
+    ).select_related("room").order_by("-id")
     if q:
         qs = qs.filter(name__icontains=q) | qs.filter(reg_no__icontains=q)
+
+    # De-duplicate by reg_no
+    seen = set()
+    deduped_qs = []
+    for s in qs:
+        k = (s.reg_no or "").strip().lower()
+        if k and k not in seen:
+            seen.add(k)
+            deduped_qs.append(s)
 
     def sel(s):
         o = format_html_join("", '<option value="{}"{}>{} ({} free)</option>',
@@ -745,7 +760,7 @@ def students(r):
         del_btn = btn(r, "delete_item", ["student", s.id], "Delete", "no")
         return format_html('<div style="display:flex;gap:0.4rem;align-items:center;">{}{}</div>', form_alloc, del_btn)
 
-    rows = [[s.reg_no, s.name, s.gender, f"{s.course} {s.year}", s.phone, f"{s.guardian_name} ({s.guardian_phone})", actions(s)] for s in qs]
+    rows = [[s.reg_no, s.name, s.gender, f"{s.course} {s.year}", s.phone, f"{s.guardian_name} ({s.guardian_phone})", actions(s)] for s in deduped_qs]
     intro = format_html('<form class="inline"><input name="q" value="{}" placeholder="Search name or register number"><button class="btn sm">Search</button></form>', q)
     return page(r, "Students", ["Register no.", "Name", "Gender", "Course", "Phone", "Guardian", "Room & Actions"], rows, intro=intro)
 

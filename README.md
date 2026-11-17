@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Hostel Sphere
 
 Integrated Smart Hostel Management System built with Django.
@@ -43,3 +44,7 @@ Integrated Smart Hostel Management System built with Django.
 
 
 **Website:** [https://smarthostelsphere.pythonanywhere.com](https://smarthostelsphere.pythonanywhere.com)
+=======
+# Hostel-sphere
+Integrated Smart Hostel Management System
+>>>>>>> f733909f4d15c83700c29cf9aefb449e099b8e3e

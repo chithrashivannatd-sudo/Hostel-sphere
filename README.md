@@ -42,7 +42,4 @@ Integrated Smart Hostel Management System built with Django.
    ## Screenshots
    ![Login](login.png)
 
-
-**Website:** [https://smarthostelsphere.pythonanywhere.com](https://smarthostelsphere.pythonanywhere.com)
-=======
-
+**Website:** [https://hostiva.pythonanywhere.com](https://hostiva.pythonanywhere.com)
